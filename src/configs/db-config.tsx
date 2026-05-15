@@ -1,6 +1,8 @@
+//TODO ESTO HAY QUE CAMBIARLO PARA NUESTRO PROYECTO
+
 const DBConfig = {
     host        : 'localhost',
-    database    : 'DAI',
+    database    : 'SheliGo',
     user        : 'postgres',
     password    : 'root',
     port        : 5432
