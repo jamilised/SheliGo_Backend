@@ -1,18 +1,16 @@
-import pkg from 'pg'
-import config from '../configs/db-config.js'
-import LogHelper from '../helpers/log-helper.js'
-
-const { Pool } = pkg
+import { Pool } from 'pg'
+import config from '../configs/db-config'
+import LogHelper from '../helpers/log-helper'
 
 export default class DbPg {
 
-    DBPool: pkg.Pool | null
+    DBPool: Pool | null
 
     constructor() {
         this.DBPool = null
     }
 
-    getDBPool = (): pkg.Pool => {
+    getDBPool = (): Pool => {
 
         if (this.DBPool == null) {
             this.DBPool = new Pool(config)
@@ -34,7 +32,11 @@ export default class DbPg {
             returnArray = resultPg.rows
 
         } catch (error) {
-            LogHelper.logError(error)
+
+            if (error instanceof Error) {
+                LogHelper.logError(error)
+            }
+
         }
 
         return returnArray
@@ -55,7 +57,11 @@ export default class DbPg {
             }
 
         } catch (error) {
-            LogHelper.logError(error)
+
+            if (error instanceof Error) {
+                LogHelper.logError(error)
+            }
+
         }
 
         return returnEntity
