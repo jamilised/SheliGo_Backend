@@ -1,6 +1,6 @@
 import { Pool } from 'pg'
-import config from '../configs/db-config'
-import LogHelper from '../helpers/log-helper'
+import config from '../configs/db-config.js'
+import LogHelper from '../helpers/log-helper.js'
 
 export default class DbPg {
 
