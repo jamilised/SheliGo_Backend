@@ -1,6 +1,6 @@
 export default class Institucion {
     constructor(
-        public id: number,
+        public id: string,
         public nombre: string,
         public email: string | null,
         public direccion: string,
