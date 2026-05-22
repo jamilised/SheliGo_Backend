@@ -58,6 +58,9 @@ export default class DbPg {
 
         } catch (error) {
 
+            console.error('ERROR REAL POSTGRES:')
+            console.error(error)
+
             if (error instanceof Error) {
                 LogHelper.logError(error)
             }
