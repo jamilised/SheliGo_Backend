@@ -1,39 +1,38 @@
-import { supabase } from '../database/supabase.js'
+import DbPg from './db-pg.js'
 
-export default class PublicacionesRepository {
+class PublicacionesRepository {
 
-  async getById(id: string) {
+    db = new DbPg()
 
-    const { data, error } = await supabase
-      .from('publicaciones')
-      .select(`
-        *,
-        usuarios (
-          id,
-          nombre,
-          apellido
-        ),
-        instituciones (
-          id,
-          nombre
-        ),
-        archivos (
-          id,
-          url,
-          es_principal
-        ),
-        preguntas (
-          id,
-          contenido
-        )
-      `)
-      .eq('id', id)
-      .single()
+    getById = async (id: string) => {
 
-    if (error) {
-      throw error
-    }
+    console.log('ID RECIBIDO:', id)
 
-    return data
-  }
+    const sql = `
+        SELECT
+            p.*,
+            u.nombre AS usuario_nombre,
+            u.apellido AS usuario_apellido,
+            c.nombre AS categoria_nombre,
+            i.nombre AS institucion_nombre
+        FROM publicaciones p
+        INNER JOIN usuarios u
+            ON u.id = p.usuario_id
+        LEFT JOIN categorias c
+            ON c.id = p.categoria_id
+        LEFT JOIN instituciones i
+            ON i.id = p.institucion_id
+        WHERE p.id = $1
+    `
+
+    const result =
+        await this.db.queryOne(sql, [id])
+
+    console.log('RESULTADO QUERY:', result)
+
+    return result
 }
+
+}
+
+export default PublicacionesRepository

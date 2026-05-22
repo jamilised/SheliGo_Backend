@@ -1,7 +1,14 @@
-import AppError from './app-error.js'
+export default class NotFoundError extends Error {
 
-export default class NotFoundError extends AppError {
-  constructor(message = 'Recurso no encontrado') {
-    super(message, 404)
-  }
+    statusCode: number
+
+    constructor(message: string) {
+
+        super(message)
+
+        this.name = 'NotFoundError'
+        this.statusCode = 404
+
+    }
+
 }

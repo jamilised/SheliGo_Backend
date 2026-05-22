@@ -1,45 +1,40 @@
 import type { Request, Response } from 'express'
-import PublicacionesService
-from '../services/publicaciones.service.js'
+import PublicacionesService from '../services/publicaciones.service.js'
 
-class PublicacionesController {
+const getPublicacionDetalle = async (
+    req: Request,
+    res: Response
+) => {
 
-    getPublicacionDetalle = async (
-        req: Request,
-        res: Response
-    ) => {
+    try {
 
-        try {
+        const id = req.params.id
 
-            const id = req.params.id
+        if (!id || Array.isArray(id)) {
 
-            if (!id || Array.isArray(id)) {
-                return res.status(400).json({
-                    error: 'ID inválido'
-                })
-            }
-
-            const publicacion =
-                await PublicacionesService.getDetalle(id)
-
-            if (!publicacion) {
-                return res.status(404).json({
-                    error: 'Publicación no encontrada'
-                })
-            }
-
-            return res.status(200).json(publicacion)
-
-        } catch (error) {
-
-            return res.status(500).json({
-                error: 'Error interno'
+            return res.status(400).json({
+                error: 'ID inválido'
             })
 
         }
+
+        const publicacion =
+            await PublicacionesService.getDetalle(id)
+
+        return res.json(publicacion)
+
+    } catch (error: any) {
+
+        return res.status(
+            error.statusCode || 500
+        ).json({
+            error: error.message
+        })
 
     }
 
 }
 
-export default new PublicacionesController()
+export default {
+    getPublicacionDetalle
+}
