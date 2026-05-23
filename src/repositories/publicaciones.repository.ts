@@ -36,6 +36,36 @@ class PublicacionesRepository {
     return result
 }
 
+getRecent = async () => {
+        console.log('EJECUTANDO: getRecent')
+        console.log('DB HOST:', process.env.DB_HOST)
+        console.log('DB DATABASE:', process.env.DB_DATABASE)
+        console.log('DB USER:', process.env.DB_USER)
+
+        const sql = `
+            SELECT 
+                p.id, 
+                p.nombre, 
+                p.descripcion, 
+                p.fecha_evento, 
+                p.estado,
+                p.lugar_institucion,
+                i.nombre AS institucion_nombre
+            FROM publicaciones p
+            LEFT JOIN instituciones i 
+                ON i.id = p.institucion_id
+            ORDER BY p.fecha_evento DESC 
+            LIMIT 15
+        `
+
+        const result =
+            await this.db.queryAll(sql)
+
+        console.log('RESULTADO QUERY RECIENTES:', result)
+
+        return result
+    }
+
 }
 
 export default PublicacionesRepository
