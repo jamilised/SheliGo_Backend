@@ -15,4 +15,4 @@ class InstitucionesService {
     };
 }
 
-export default InstitucionesService;
+export default new InstitucionesService;

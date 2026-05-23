@@ -4,7 +4,7 @@ class UsuariosService {
     private usuariosRepo = new UsuariosRepository();
 
     getPerfil = async (id: string | undefined) => {
-        // Si el controlador no nos pasa un ID (porque el usuario no está logueado)
+
         if (!id) {
             return null;
         }
@@ -18,4 +18,4 @@ class UsuariosService {
     };
 }
 
-export default UsuariosService;
+export default new UsuariosService;
