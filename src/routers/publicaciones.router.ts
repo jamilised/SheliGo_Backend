@@ -6,14 +6,14 @@ import { authMiddleware } from '../middlewares/auth.middleware.js'
 const router = Router()
 
 router.get(
-    '/:id',
-    publicacionesController.getPublicacionDetalle
-)
-
-router.get(
     '/home', 
     authMiddleware, 
     publicacionesController.getHomeData
+)
+
+router.get(
+    '/:id',
+    publicacionesController.getPublicacionDetalle
 )
 
 export default router
