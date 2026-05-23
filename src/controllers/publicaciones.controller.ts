@@ -41,7 +41,7 @@ const getHomeData = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log('--- ENTRANDO A getHomeData EN CONTROLLER ---')
         
-        const userId = req.body.userIdLogged
+        const userId = res.locals.userIdLogged
         console.log('ID USUARIO LOGUEADO DESDE MIDDLEWARE:', userId)
 
         // Traemos todo en paralelo usando Promise.all
