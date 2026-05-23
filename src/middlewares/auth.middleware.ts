@@ -19,10 +19,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
         // const userId = decoded.id
         
         // De forma provisoria para probar tu pantalla, simulamos que el token es el mismo ID de usuario:
-        const userId = token 
-
-        // Inyectamos el id del usuario en el objeto de la petición (req)
-        req.body.userIdLogged = userId
+        res.locals.userIdLogged = token
 
         return next()
 
