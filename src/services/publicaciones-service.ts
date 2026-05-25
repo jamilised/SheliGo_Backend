@@ -1,4 +1,4 @@
-import PublicacionesRepository from '../repositories/publicaciones.repository.js'
+import PublicacionesRepository from '../repositories/publicaciones-repository.js'
 import NotFoundError from '../errors/not-found-error.js'
 
 class PublicacionesService {
