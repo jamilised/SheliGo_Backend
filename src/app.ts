@@ -1,6 +1,6 @@
 import express from 'express'
 import publicacionesRouter
-from './routers/publicaciones.router.js'
+from './routers/publicaciones-router.js'
 
 const app = express()
 

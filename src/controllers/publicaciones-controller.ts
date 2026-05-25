@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express'
-import PublicacionesService from '../services/publicaciones.service.js'
+import PublicacionesService from '../services/publicaciones-service.js'
 
 const getPublicacionDetalle = async (
     req: Request,

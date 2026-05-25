@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import publicacionesController
-from '../controllers/publicaciones.controller.js'
+from '../controllers/publicaciones-controller.js'
 
 const router = Router()
 

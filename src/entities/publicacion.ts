@@ -13,6 +13,7 @@ export default class Publicacion {
         public created_at: string,
         public updated_at: string,
         public tipo: string,
-        public estado: string
+        public estado: string,
+        public lugar_institucion: string | null
     ) {}
 }

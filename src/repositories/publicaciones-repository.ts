@@ -6,11 +6,6 @@ class PublicacionesRepository {
 
     getById = async (id: string) => {
 
-    console.log('ID RECIBIDO:', id)
-    console.log('DB HOST:', process.env.DB_HOST)
-    console.log('DB DATABASE:', process.env.DB_DATABASE)
-    console.log('DB USER:', process.env.DB_USER)
-
     const sql = `
         SELECT
             p.*,
@@ -30,8 +25,6 @@ class PublicacionesRepository {
 
     const result =
         await this.db.queryOne(sql, [id])
-
-    console.log('RESULTADO QUERY:', result)
 
     return result
 }
