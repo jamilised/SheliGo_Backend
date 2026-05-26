@@ -13,7 +13,7 @@ export default class PreguntasRepository {
                 id,
                 publicacion_id,
                 usuario_id,
-                pregunta,
+                contenido,
                 created_at
             FROM preguntas
             WHERE publicacion_id = $1
@@ -30,14 +30,14 @@ export default class PreguntasRepository {
     create = async (
         publicacionId: string,
         usuarioId: string,
-        pregunta: string
+        contenido: string
     ) => {
 
         const sql = `
             INSERT INTO preguntas (
                 publicacion_id,
                 usuario_id,
-                pregunta
+                contenido
             )
             VALUES (
                 $1,
@@ -52,7 +52,7 @@ export default class PreguntasRepository {
             [
                 publicacionId,
                 usuarioId,
-                pregunta
+                contenido
             ]
         )
 
