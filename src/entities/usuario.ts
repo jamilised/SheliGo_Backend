@@ -8,6 +8,7 @@ export default class Usuario {
         public telefono: string | null,
         public created_at: string,
         public updated_at: string,
-        public rol: string // 'user' | 'admin'
+        public rol: string, // 'user' | 'admin',
+        public foto: string
     ) {}
 }
