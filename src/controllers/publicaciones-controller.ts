@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import PublicacionesService from '../services/publicaciones.service.js'
+import PublicacionesService from '../services/publicaciones-service.js'
 import InstitucionesService from '../services/instituciones-service.js'
 import UsuariosService from '../services/usuarios-service.js'
 
