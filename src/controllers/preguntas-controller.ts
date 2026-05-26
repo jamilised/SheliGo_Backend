@@ -59,7 +59,7 @@ const createPregunta = async (
 
         const {
             usuario_id,
-            pregunta
+            contenido
         } = req.body
 
         if (
@@ -78,7 +78,7 @@ const createPregunta = async (
                 .createPregunta(
                     id,
                     usuario_id,
-                    pregunta
+                    contenido
                 )
 
         return res.status(201).json(

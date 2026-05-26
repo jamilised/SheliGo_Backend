@@ -20,14 +20,14 @@ class PreguntasService {
     createPregunta = async (
         publicacionId: string,
         usuarioId: string,
-        pregunta: string
+        contenido: string
     ) => {
 
         return await this.repository
             .create(
                 publicacionId,
                 usuarioId,
-                pregunta
+                contenido
             )
 
     }
