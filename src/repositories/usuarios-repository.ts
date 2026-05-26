@@ -20,7 +20,8 @@ class UsuariosRepository {
                 apellido, 
                 email, 
                 telefono,
-                created_at
+                created_at,
+                foto
             FROM usuarios
             WHERE id = $1
         `
