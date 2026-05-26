@@ -10,3 +10,5 @@ router.get(
     authMiddleware, 
     homeController.getHomeData
 )
+
+export default router
