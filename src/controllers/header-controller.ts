@@ -23,4 +23,4 @@ class HeaderController {
     }
 }
 
-export default HeaderController
+export default new HeaderController
