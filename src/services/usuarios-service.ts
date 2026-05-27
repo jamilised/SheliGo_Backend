@@ -17,6 +17,7 @@ class UsuariosService {
 
         // Si el usuario no tiene foto cargada
         if (!usuario.foto) {
+            console.log(`Usuario ${id} sin foto, usando Gravatar por defecto`)
             usuario.foto = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
         }
         return usuario;
