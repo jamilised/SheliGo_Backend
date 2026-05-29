@@ -3,39 +3,52 @@ import PublicacionesService from '../services/publicaciones-service.js'
 import InstitucionesService from '../services/instituciones-service.js'
 import UsuariosService from '../services/usuarios-service.js'
 
-const getHomeData = async (req: Request, res: Response, next: NextFunction) => {
+// 1. ENDPOINT PARA EL USUARIO
+const getHomeUsuario = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('--- ENTRANDO A getHomeData EN CONTROLLER ---')
-        
         const userId = res.locals.userIdLogged
-        console.log('ID USUARIO LOGUEADO DESDE MIDDLEWARE:', userId)
+        const usuario = await UsuariosService.getPerfil(userId)
 
-        // Traemos todo en paralelo usando Promise.all
-        const [publicaciones, instituciones, usuario] = await Promise.all([
-            PublicacionesService.getRecentPublicaciones(),
-            InstitucionesService.getRecentInstituciones(),
-            UsuariosService.getPerfil(userId)
-        ])
-
-        console.log('DATOS RECOLECTADOS CON EXITO')
-
-        // Devolvemos la respuesta con la estructura limpia
         return res.status(200).json({
             status: 'success',
-            data: {
-                usuario,
-                publicaciones,
-                instituciones
-            }
+            data: { usuario }
         })
-
     } catch (error) {
-        console.log('ERROR EN getHomeData:', error)
-        // Le pasamos el error a express para que use AppError y LogHelper
         return next(error)
     }
 }
 
+// 2. ENDPOINT PARA LAS PUBLICACIONES RECIENTES
+const getHomePublicaciones = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const publicaciones = await PublicacionesService.getRecentPublicaciones()
+
+        return res.status(200).json({
+            status: 'success',
+            data: { publicaciones }
+        })
+    } catch (error) {
+        return next(error)
+    }
+}
+
+// 3. ENDPOINT PARA LAS INSTITUCIONES RECIENTES
+const getHomeInstituciones = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const instituciones = await InstitucionesService.getRecentInstituciones()
+
+        return res.status(200).json({
+            status: 'success',
+            data: { instituciones }
+        })
+    } catch (error) {
+        return next(error)
+    }
+}
+
+// Exportamos los tres métodos nuevos
 export default {
-    getHomeData
+    getHomeUsuario,
+    getHomePublicaciones,
+    getHomeInstituciones
 }
