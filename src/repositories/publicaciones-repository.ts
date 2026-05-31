@@ -43,10 +43,19 @@ getRecent = async () => {
                 p.fecha_evento, 
                 p.estado,
                 p.lugar_institucion,
-                i.nombre AS institucion_nombre
+                i.nombre AS institucion_nombre,
+                a.url AS foto_principal_url,
+                a.mime_type AS foto_principal_mime_type
             FROM publicaciones p
             LEFT JOIN instituciones i 
                 ON i.id = p.institucion_id
+            LEFT JOIN LATERAL (
+                SELECT url, mime_type
+                FROM archivos
+                WHERE publicacion_id = p.id
+                ORDER BY es_principal DESC, created_at DESC
+                LIMIT 1
+            ) a ON true
             ORDER BY p.fecha_evento DESC 
             LIMIT 15
         `
