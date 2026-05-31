@@ -1,5 +1,6 @@
 import UsuariosRepository from '../repositories/usuarios-repository.js';
 import AppError from '../errors/app-error.js'
+import { StorageHelper } from '../helpers/storage-helper.js';
 
 class UsuariosService {
     private usuariosRepo = new UsuariosRepository();
@@ -14,12 +15,9 @@ class UsuariosService {
         if (!usuario) {
             throw new AppError('Usuario no encontrado', 404);
         }
-
-        // Si el usuario no tiene foto cargada
-        if (!usuario.foto) {
-            console.log(`Usuario ${id} sin foto, usando Gravatar por defecto`)
-            usuario.foto = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'
-        }
+        
+        usuario.foto = StorageHelper.buildUrl(usuario.foto);
+        
         return usuario;
     };
 }
