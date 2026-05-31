@@ -1,6 +1,7 @@
 import PublicacionesRepository from '../repositories/publicaciones-repository.js'
 import NotFoundError from '../errors/not-found-error.js'
 import AppError from '../errors/app-error.js';
+import { StorageHelper } from '../helpers/storage-helper.js';
 
 class PublicacionesService {
 
@@ -28,7 +29,16 @@ class PublicacionesService {
             throw new AppError('Error al recuperar las publicaciones recientes', 500);
         }
 
-        return publicaciones;
+        // URL base de tu bucket público en Supabase (reemplazá con tu host real de Supabase)
+        const SUPABASE_STORAGE_URL = 'https://evovbsxgvzljkbcheipp.supabase.co/storage/v1/object/public/avatars/'
+
+        // 2. Mapeamos el array para transformar la URL de cada publicación
+        const publicacionesConUrlCompleta = publicaciones.map((pub: any) => {
+            pub.foto_principal_url = StorageHelper.buildUrl(pub.foto_principal_url);
+            return pub;
+        })
+        
+        return publicacionesConUrlCompleta;
     };
 
 }
