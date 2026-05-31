@@ -1,6 +1,7 @@
 import PublicacionesRepository from '../repositories/publicaciones-repository.js'
 import NotFoundError from '../errors/not-found-error.js'
 import AppError from '../errors/app-error.js';
+import { StorageHelper } from '../helpers/storage-helper.js';
 
 class PublicacionesService {
 
@@ -33,14 +34,8 @@ class PublicacionesService {
 
         // 2. Mapeamos el array para transformar la URL de cada publicación
         const publicacionesConUrlCompleta = publicaciones.map((pub: any) => {
-            // Si la publicación tiene una foto asociada, le pegamos la URL base adelante
-            if (pub.foto_principal_url) {
-                pub.foto_principal_url = `${SUPABASE_STORAGE_URL}${pub.foto_principal_url}`
-            } else {
-                // Opcional: Si no tiene foto, le podés clavar una foto por defecto para que el Front no quede vacío
-                pub.foto_principal_url = 'https://www.publicdomainpictures.net/pictures/200000/velka/placeholder-bege.jpg'
-            }
-            return pub
+            pub.foto_principal_url = StorageHelper.buildUrl(pub.foto_principal_url);
+            return pub;
         })
         
         return publicacionesConUrlCompleta;
