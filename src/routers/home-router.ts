@@ -1,14 +1,16 @@
 import { Router } from 'express'
-import homeController
-from '../controllers/home-controller.js'
+import homeController from '../controllers/home-controller.js'
 import { authMiddleware } from '../middlewares/auth-middleware.js'
 
 const router = Router()
 
-router.get(
-    '/', 
-    authMiddleware, 
-    homeController.getHomeData
-)
+// GET /home/usuario
+router.get('/usuario', authMiddleware, homeController.getHomeUsuario)
+
+// GET /home/publicaciones
+router.get('/publicaciones', authMiddleware, homeController.getHomePublicaciones)
+
+// GET /home/instituciones
+router.get('/instituciones', authMiddleware, homeController.getHomeInstituciones)
 
 export default router
