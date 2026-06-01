@@ -1,5 +1,6 @@
-import ArchivosRepository
-from '../repositories/archivos-repository.js'
+import ArchivosRepository from '../repositories/archivos-repository.js'
+
+import { StorageHelper } from '../helpers/storage-helper.js'
 
 class ArchivosService {
 
@@ -9,8 +10,24 @@ class ArchivosService {
         publicacionId: string
     ) => {
 
-        return await this.repository
-            .getByPublicacionId(publicacionId)
+        const archivos =
+            await this.repository
+                .getByPublicacionId(
+                    publicacionId
+                ) || []
+
+        return archivos.map(
+            (archivo: any) => ({
+
+                ...archivo,
+
+                url:
+                    StorageHelper.buildUrl(
+                        archivo.url
+                    )
+
+            })
+        )
 
     }
 
