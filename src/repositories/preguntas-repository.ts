@@ -9,15 +9,33 @@ export default class PreguntasRepository {
     ) => {
 
         const sql = `
-            SELECT
-                id,
-                publicacion_id,
-                usuario_id,
-                contenido,
-                created_at
-            FROM preguntas
-            WHERE publicacion_id = $1
-            ORDER BY created_at DESC
+          SELECT
+
+            p.id,
+            p.publicacion_id,
+            p.usuario_id,
+            p.contenido,
+            p.created_at,
+
+            u.nombre AS usuario_nombre,
+            u.apellido AS usuario_apellido,
+            u.foto AS usuario_foto,
+
+            r.id AS respuesta_id,
+            r.contenido AS respuesta_contenido,
+            r.created_at AS respuesta_created_at
+
+            FROM preguntas p
+
+            INNER JOIN usuarios u
+                ON u.id = p.usuario_id
+
+            LEFT JOIN respuestas r
+                ON r.pregunta_id = p.id
+
+            WHERE p.publicacion_id = $1
+
+            ORDER BY p.created_at DESC
         `
 
         return await this.db.queryAll(
