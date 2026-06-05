@@ -11,8 +11,10 @@ class PublicacionesRepository {
             p.*,
             u.nombre AS usuario_nombre,
             u.apellido AS usuario_apellido,
+            u.foto AS usuario_foto,
             c.nombre AS categoria_nombre,
-            i.nombre AS institucion_nombre
+            i.nombre AS institucion_nombre,
+            i.direccion AS institucion_direccion
         FROM publicaciones p
         INNER JOIN usuarios u
             ON u.id = p.usuario_id
@@ -45,6 +47,7 @@ getRecent = async () => {
                 p.estado,
                 p.lugar_institucion,
                 i.nombre AS institucion_nombre,
+                i.direccion AS institucion_direccion,
                 a.url AS foto_principal_url,
                 a.mime_type AS foto_principal_mime_type
             FROM publicaciones p
