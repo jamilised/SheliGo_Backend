@@ -21,6 +21,7 @@ class AuthService {
         }
 
         // --- 2. VALIDACIÓN: COINCIDENCIA DE CONTRASENIAS ---
+        console.log("Lo que llega al servicio:", { password, confirmPassword }); // O como se llamen tus variables
         if (password !== confirmPassword) {
             console.log('⚠️ Validación fallida: Las contraseñas no coinciden')
             throw new AppError('Las contraseñas no coinciden.', 400)
