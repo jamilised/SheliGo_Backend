@@ -10,6 +10,9 @@ from "./routers/header-router.js";
 import homeRouter
 from "./routers/home-router.js";
 
+import authRouter
+from './routers/auth-router.js'
+
 const app = express();
 
 /*
@@ -45,5 +48,10 @@ app.use(
   "/home",
   homeRouter
 );
+
+app.use(
+    '/auth',
+    authRouter
+)
 
 export default app;
