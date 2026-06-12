@@ -13,6 +13,8 @@ from "./routers/home-router.js";
 import authRouter 
 from "./routers/auth-router.js";
 
+import { errorMiddleware } from './middlewares/error-middleware.js';
+
 const app = express();
 
 /*
@@ -52,5 +54,9 @@ app.use(
 app.use(
   "/auth", 
   authRouter);
+
+app.use(
+  errorMiddleware
+);
 
 export default app;
