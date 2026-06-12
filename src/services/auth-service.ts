@@ -109,20 +109,28 @@ class AuthService {
                 const fotoFinalPath = `usuarios/${fileName}`
 
                 console.log(`☁️ Subiendo imagen optimizada a Supabase Storage: ${fotoFinalPath}`)
-                const storageUrl = `https://evovbsxgvzljkbcheipp.supabase.co/storage/v1/object/public/avatars/${fotoFinalPath}`
+                const storageUrl = `https://evovbsxgvzljkbcheipp.supabase.co/storage/v1/object/avatars/${fotoFinalPath}`
                 
+                // Buscamos la clave de Supabase en tus variables de entorno. 
+                // Cambiá 'SUPABASE_KEY' por el nombre exacto que tengan en su archivo .env (ej: SUPABASE_ANON_KEY o SUPABASE_KEY)
+                const supabaseToken = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+
                 const response = await fetch(storageUrl, {
-                    method: 'POST',
+                    method: 'PUT',
                     body: new Uint8Array(bufferOptimizado),
                     headers: {
-                        'Content-Type': 'image/jpeg'
-                        // Si tu bucket requiere autenticación, agregá acá tus tokens:
-                        // 'Authorization': 'Bearer TU_ANON_KEY'
+                        'Content-Type': 'image/jpeg',
+                        'x-upsert': 'true',
+                        'Authorization': `Bearer ${supabaseToken}`, // <-- ¡MANDATORIO! Esto soluciona tu error 400
+                        'apikey': supabaseToken // <-- Supabase a veces pide que dupliquemos el token en este header
                     }
                 })
 
+                // Vamos a espiar qué nos responde exactamente Supabase si vuelve a fallar
                 if (!response.ok) {
-                    console.error('❌ Error crítico al subir el archivo en el Storage de Supabase:', response.statusText)
+                    const errorTexto = await response.text();
+                    console.error('❌ Error crítico al subir el archivo en el Storage de Supabase:', response.status, response.statusText)
+                    console.error('📋 Detalle de Supabase:', errorTexto)
                     console.error('⚠️ Se conservará "usuarios/default.png" para este perfil.')
                 } else {
                     console.log('✅ Imagen subida con éxito absoluto a Supabase Storage')
