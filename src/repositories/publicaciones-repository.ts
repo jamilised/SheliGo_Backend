@@ -14,8 +14,8 @@ class PublicacionesRepository {
             u.foto AS usuario_foto,
             c.nombre AS categoria_nombre,
             i.nombre AS institucion_nombre,
-            i.direccion AS institucion_direccion
-            i.latitud
+            i.direccion AS institucion_direccion,
+            i.latitud,
             i.longitud
         FROM publicaciones p
         INNER JOIN usuarios u
