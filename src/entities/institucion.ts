@@ -6,6 +6,8 @@ export default class Institucion {
         public direccion: string,
         public telefono: string | null,
         public foto: string,
+        public latitud: number | null,
+        public longitud: number | null,
         public created_at: string,
         public updated_at: string
     ) {}

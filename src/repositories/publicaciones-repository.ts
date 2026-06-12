@@ -15,6 +15,8 @@ class PublicacionesRepository {
             c.nombre AS categoria_nombre,
             i.nombre AS institucion_nombre,
             i.direccion AS institucion_direccion
+            i.latitud
+            i.longitud
         FROM publicaciones p
         INNER JOIN usuarios u
             ON u.id = p.usuario_id
