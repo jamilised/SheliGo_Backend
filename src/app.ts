@@ -11,6 +11,9 @@ import homeRouter
   from "./routers/home-router.js";
 
 
+import institucionesRouter 
+  from './routers/instituciones-router.js';
+
 import loginRouter
   from './routers/login-router.js'
 
@@ -46,8 +49,20 @@ app.use(
 
 app.use(express.json());
 
-app.use('/auth', authRouter);
-app.use('/usuarios', usuariosRouter);
+app.use(
+  '/auth', 
+  authRouter
+);
+
+app.use(
+  '/usuarios', 
+  usuariosRouter
+);
+
+app.use(
+  '/instituciones', 
+  institucionesRouter
+);
 
 app.use(
   "/publicaciones",
