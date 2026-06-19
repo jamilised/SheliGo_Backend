@@ -43,6 +43,23 @@ class PublicacionesService {
         return publicacionesConUrlCompleta;
     };
 
+
+    searchPublicaciones = async (filtros: {
+    busqueda?: string;
+    categoria_id?: string;
+    institucion_id?: string;
+    lugar_institucion?: string;
+    fecha?: string;
+    tipo?: string;
+}) => {
+    console.log('S1: Entrando a searchPublicaciones en el Service');
+    
+    // Acá podrías meter lógica de negocio si hiciera falta en el futuro
+    // Por ahora, le mandamos los filtros directo al repositorio
+    const publicaciones = await this.repository.search(filtros);
+    
+    return publicaciones;
+}
 }
 
 export default new PublicacionesService()
