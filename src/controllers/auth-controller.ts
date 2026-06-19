@@ -4,7 +4,7 @@ import type {
 } from 'express'
 
 import AuthService
-from '../services/auth-service.js'
+from '../services/login-service.js'
 
 const login = async (
     req: Request,
