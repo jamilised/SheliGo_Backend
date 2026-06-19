@@ -40,11 +40,14 @@ class UsuariosRepository {
         console.log('EJECUTANDO: getByEmail en UsuariosRepository para:', email);
         const sql = `SELECT 
                         id, 
-                        email 
+                        nombre,
+                        apellido,
+                        email, 
+                        password_hash, -- 🚀 ¡Agregamos el hash para comparar en el login!
+                        foto
                     FROM usuarios 
                     WHERE email = $1`;
-        const result =
-            await this.db.queryOne(sql, [email]);
+        const result = await this.db.queryOne(sql, [email]);
         console.log('RESULTADO QUERY EMAIL:', result ? 'Existe' : 'No existe');
         return result;
     }

@@ -7,7 +7,7 @@ import { loginSchema, registerSchema } from '../validations/auth-schema.js';
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-// POST /api/auth/login -> Primero valida los datos con Zod, luego va al controller
+// POST /api/auth/register -> Valida con Zod, atrapa los archivos con Multer y registra
 router.post(
     '/register', 
     upload.any(),
@@ -15,12 +15,11 @@ router.post(
     authController.register
 );
 
-// POST /api/auth/register -> Valida con Zod, atrapa los archivos con Multer y registra
+// POST /api/auth/login -> Primero valida los datos con Zod, luego va al controller
 router.post(
-    '/register', 
-    validateBody(registerSchema), 
-    upload.any(), 
-    authController.register
+    '/login', 
+    validateBody(loginSchema),
+    authController.login
 );
 
 export default router;
