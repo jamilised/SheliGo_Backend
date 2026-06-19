@@ -12,8 +12,8 @@ const getHomeUsuario = async (
     try {
 
         const usuario = await UsuariosService.getPerfil(
-            process.env.USER_ID_HOME
-        )
+            res.locals.userIdLogged
+        );
 
         return res.status(200).json({
             status: 'success',
