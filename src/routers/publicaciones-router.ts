@@ -1,46 +1,19 @@
-import { Router } from 'express'
-import publicacionesController
-from '../controllers/publicaciones-controller.js';
+import { Router } from 'express';
+import publicacionesController from '../controllers/publicaciones-controller.js';
+import { authMiddleware } from '../middlewares/auth-middleware.js';
+import { validateQuery } from '../middlewares/validation-middleware.js';
+import { searchPublicacionSchema } from '../validations/publicacion-schema.js';
 
-import ArchivosController
-from '../controllers/archivos-controller.js'
+const router = Router();
 
-import PreguntasController
-from '../controllers/preguntas-controller.js'
+// 📢 Rutas Públicas (No requieren login)
+router.get('/recientes', publicacionesController.getRecientes);
+router.get('/search', validateQuery(searchPublicacionSchema), publicacionesController.search);
 
-import { authMiddleware } from '../middlewares/auth-middleware.js'
+// 🔒 Rutas Privadas (Requieren token válido)
+router.get('/:id', authMiddleware, publicacionesController.getDetalle);
+router.get('/:id/archivos', authMiddleware, publicacionesController.getArchivos);
+router.get('/:id/preguntas', authMiddleware, publicacionesController.getPreguntas);
+router.post('/:id/preguntas', authMiddleware, publicacionesController.createPregunta);
 
-const router = Router()
-
-router.get('/search', 
-    publicacionesController.search
-);
-
-router.get(
-    '/:id',
-    authMiddleware,
-    publicacionesController.getPublicacionDetalle
-)
-
-router.get(
-    '/:id/archivos',
-    authMiddleware,
-    ArchivosController
-        .getPublicacionArchivos
-)
-
-router.get(
-    '/:id/preguntas',
-    authMiddleware,
-    PreguntasController
-        .getPreguntas
-)
-
-router.post(
-    '/:id/preguntas',
-    authMiddleware,
-    PreguntasController
-        .createPregunta
-)
-
-export default router
+export default router;

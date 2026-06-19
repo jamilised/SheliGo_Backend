@@ -1,76 +1,97 @@
-import type { Request, Response, NextFunction } from 'express'
-import PublicacionesService from '../services/publicaciones-service.js'
-import { searchPublicacionSchema } from '../validations/publicacion-schema.js';
+import type { Request, Response, NextFunction } from 'express';
+import publicacionesService from '../services/publicaciones-service.js';
+import preguntasService from '../services/preguntas-service.js';
+import archivosService from '../services/archivos-service.js';
 
-const getPublicacionDetalle = async (
-    req: Request,
-    res: Response
-) => {
-
+const getRecientes = async (req: Request, res: Response, next: NextFunction) => {
     try {
-
-        const id = req.params.id
-
-        if (!id || Array.isArray(id)) {
-
-            return res.status(400).json({
-                error: 'ID inválido'
-            })
-
-        }
-
-        const publicacion =
-            await PublicacionesService.getDetalle(id)
-
-        return res.json(publicacion)
-
-    } catch (error: any) {
-
-        return res.status(
-            error.statusCode || 500
-        ).json({
-            error: error.message
-        })
-
+        console.log('⚡ CONTROLLER PUB: Obteniendo recientes');
+        const publicaciones = await publicacionesService.getRecentPublicaciones();
+        return res.status(200).json({
+            status: 'success',
+            data: { publicaciones }
+        });
+    } catch (error) {
+        return next(error);
     }
-
-}
+};
 
 const search = async (req: Request, res: Response, next: NextFunction) => {
-        try {
-            console.log('C1: Iniciando búsqueda de publicaciones con Query Params:', req.query);
-
-            // 1. Validamos lo que viene por la URL
-            const validacion = searchPublicacionSchema.safeParse(req.query);
-            
-            if (!validacion.success) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Filtros de búsqueda inválidos',
-                    errors: validacion.error.format() // Le dice al front exactamente qué mandó mal
-                });
-            }
-
-            // 2. Si pasó la validación, agarramos los datos limpios
-            const filtros = validacion.data;
-
-            // 3. Llamamos al Service
-            // 3. Llamamos al Service pasándole los filtros limpios
-            const publicaciones = await PublicacionesService.searchPublicaciones(filtros as any);
-
-            // 4. Respondemos con éxito
-            return res.status(200).json({
-                success: true,
-                data: publicaciones
-            });
-
-        } catch (error) {
-            console.error('ERROR en publicacionesController.search:', error);
-            next(error);
-        }
+    try {
+        console.log('⚡ CONTROLLER PUB: Iniciando búsqueda filtrada');
+        // El middleware 'validateQuery' ya validó y limpió req.query ✨
+        const publicaciones = await publicacionesService.searchPublicaciones(req.query as any);
+        return res.status(200).json({
+            status: 'success',
+            data: { publicaciones }
+        });
+    } catch (error) {
+        return next(error);
     }
+};
+
+const getDetalle = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id as string;
+        const publicacion = await publicacionesService.getDetalle(id);
+        return res.status(200).json({
+            status: 'success',
+            data: { publicacion }
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const getArchivos = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id as string;
+        const archivos = await archivosService.getArchivos(id);
+        return res.status(200).json({
+            status: 'success',
+            data: { archivos }
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const getPreguntas = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id as string;
+        const preguntas = await preguntasService.getPreguntas(id);
+        return res.status(200).json({
+            status: 'success',
+            data: { preguntas }
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const createPregunta = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = req.params.id as string;
+        const { contenido } = req.body;
+        const usuarioId = res.locals.userIdLogged;
+
+        const nuevaPregunta = await preguntasService.createPregunta(id, usuarioId, contenido);
+
+        return res.status(201).json({
+            status: 'success',
+            message: 'Pregunta creada correctamente',
+            data: { pregunta: nuevaPregunta }
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
 
 export default {
-    getPublicacionDetalle,
-    search
-}
+    getRecientes,
+    search,
+    getDetalle,
+    getArchivos,
+    getPreguntas,
+    createPregunta
+};

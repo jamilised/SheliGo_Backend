@@ -43,7 +43,7 @@ class UsuariosRepository {
                         nombre,
                         apellido,
                         email, 
-                        password_hash, -- 🚀 ¡Agregamos el hash para comparar en el login!
+                        password_hash,
                         foto
                     FROM usuarios 
                     WHERE email = $1`;
