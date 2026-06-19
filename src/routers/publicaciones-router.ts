@@ -8,7 +8,7 @@ from '../controllers/archivos-controller.js'
 import PreguntasController
 from '../controllers/preguntas-controller.js'
 
-import { authMiddleware } from '../middlewares/authMiddleware.js'
+import { authMiddleware } from '../middlewares/auth-middleware.js'
 
 const router = Router()
 
