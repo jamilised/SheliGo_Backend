@@ -26,6 +26,10 @@ import authRouter
 import usuariosRouter
   from './routers/usuarios-router.js';
 
+
+import categoriasRouter 
+  from './routers/categorias-router.js';
+
 import { errorMiddleware } from './middlewares/error-middleware.js';
 
 const app = express();
@@ -48,6 +52,11 @@ app.use(
 );
 
 app.use(express.json());
+
+app.use(
+  '/api/categorias', 
+  categoriasRouter
+);
 
 app.use(
   '/auth', 
