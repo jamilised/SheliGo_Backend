@@ -2,7 +2,7 @@ import { Router }
 from 'express'
 
 import AuthController
-from '../controllers/auth-controller.js'
+from '../controllers/login-controller.js'
 
 const router =
     Router()

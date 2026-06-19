@@ -11,7 +11,7 @@ import homeRouter
 from "./routers/home-router.js";
 
 import authRouter
-from './routers/auth-router.js'
+from './routers/login-router.js'
 
 const app = express();
 
