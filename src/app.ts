@@ -2,20 +2,26 @@ import express from "express";
 import cors from "cors";
 
 import publicacionesRouter
-from "./routers/publicaciones-router.js";
+  from "./routers/publicaciones-router.js";
 
 import headerRouter
-from "./routers/header-router.js";
+  from "./routers/header-router.js";
 
 import homeRouter
-from "./routers/home-router.js";
+  from "./routers/home-router.js";
 
 
 import loginRouter
-from './routers/login-router.js'
+  from './routers/login-router.js'
 
-import registerRouter 
-from "./routers/register-router.js";
+import registerRouter
+  from "./routers/register-router.js";
+
+import authRouter
+  from './routers/auth-router.js';
+
+import usuariosRouter
+  from './routers/usuarios-router.js';
 
 import { errorMiddleware } from './middlewares/error-middleware.js';
 
@@ -40,6 +46,9 @@ app.use(
 
 app.use(express.json());
 
+app.use('/api/auth', authRouter);
+app.use('/api/usuarios', usuariosRouter);
+
 app.use(
   "/publicaciones",
   publicacionesRouter
@@ -56,13 +65,13 @@ app.use(
 );
 
 app.use(
-    '/login',
-    loginRouter
+  '/login',
+  loginRouter
 )
 
 app.use(
-    '/register',
-    registerRouter
+  '/register',
+  registerRouter
 )
 
 app.use(
