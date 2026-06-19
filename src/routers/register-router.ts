@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
-import authController from '../controllers/auth-controller.js'
+import authController from '../controllers/register-controller.js'
 
 const router = Router()
 
