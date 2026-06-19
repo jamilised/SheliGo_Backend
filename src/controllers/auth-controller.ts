@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import authService from '../services/auth-service.js'
+import authService from '../services/register-service.js'
 
 class AuthController {
 
