@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import sharp from 'sharp';
 import UsuariosRepository from '../repositories/usuarios-repository.js';
+import { StorageHelper } from '../helpers/storage-helper.js'; // 🚀 Usamos el helper genérico estático
 import AppError from '../errors/app-error.js';
 
 class AuthService {
@@ -68,13 +68,25 @@ class AuthService {
             throw new AppError('No se pudo completar el registro del usuario.', 500);
         }
 
-        // --- 4. PROCESAMIENTO Y SUBIDA DE IMAGEN (Delegado a método privado) ---
+        // --- 4. PROCESAMIENTO Y SUBIDA DE IMAGEN REUTILIZABLE ---
         let fotoFinalPath = 'usuarios/default.png';
 
         if (files && files.length > 0) {
-            const pathSubido = await this.optimizarYSubirAvatar(nuevoUsuario.id, files[0]);
+            const archivoImagen = files[0];
+            const fileName = `${nuevoUsuario.id}.jpg`;
+
+            // Invocamos al helper pasándole su configuración específica (cuadrado 400x400) 🎯
+            const pathSubido = await StorageHelper.optimizarYSubir(
+                archivoImagen.buffer,
+                'usuarios',
+                fileName,
+                { width: 400, height: 400, fit: 'cover' }
+            );
+
             if (pathSubido) {
                 fotoFinalPath = pathSubido;
+                // Sincronizamos la nueva ruta en la base de datos
+                await this.usuariosRepo.updateFoto(nuevoUsuario.id, fotoFinalPath);
             }
         } else {
             console.log('ℹ️ No se detectó foto. Asignando default.');
@@ -84,48 +96,6 @@ class AuthService {
         nuevoUsuario.foto = fotoFinalPath;
         console.log('🎉 PROCESO DE REGISTRO FINALIZADO CON ÉXITO');
         return nuevoUsuario;
-    };
-
-    // --- 🛠️ HELPER INTERNO: Aislamos la complejidad de Supabase/Sharp ---
-    private optimizarYSubirAvatar = async (usuarioId: string, archivoImagen: any): Promise<string | null> => {
-        try {
-            console.log('⚙️ Optimizando imagen con Sharp...');
-            const bufferOptimizado = await sharp(archivoImagen.buffer)
-                .resize(400, 400, { fit: 'cover' })
-                .jpeg({ quality: 80 })
-                .toBuffer();
-
-            const fileName = `${usuarioId}.jpg`;
-            const fotoFinalPath = `usuarios/${fileName}`;
-            const storageUrl = `https://evovbsxgvzljkbcheipp.supabase.co/storage/v1/object/avatars/${fotoFinalPath}`;
-            const supabaseToken = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-
-            console.log(`☁️ Subiendo avatar a Supabase: ${fotoFinalPath}`);
-            const response = await fetch(storageUrl, {
-                method: 'PUT',
-                body: new Uint8Array(bufferOptimizado),
-                headers: {
-                    'Content-Type': 'image/jpeg',
-                    'x-upsert': 'true',
-                    'Authorization': `Bearer ${supabaseToken}`,
-                    'apikey': supabaseToken
-                }
-            });
-
-            if (!response.ok) {
-                const errorTexto = await response.text();
-                console.error('❌ Error de Supabase Storage:', response.status, errorTexto);
-                return null;
-            }
-
-            console.log('✅ Imagen subida con éxito absoluto a Supabase Storage');
-            await this.usuariosRepo.updateFoto(usuarioId, fotoFinalPath);
-            return fotoFinalPath;
-
-        } catch (error) {
-            console.error('❌ Error inesperado procesando o subiendo avatar:', error);
-            return null;
-        }
     };
 }
 
