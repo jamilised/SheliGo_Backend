@@ -1,4 +1,4 @@
-import DbPg from './db-pg.js'
+import DbPg from '../database/db-pg.js'
 
 export default class ArchivosRepository {
 
