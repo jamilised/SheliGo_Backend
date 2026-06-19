@@ -7,8 +7,12 @@ class CategoriasService {
     getAllCategorias = async () => {
         const categorias = await this.categoriasRepo.getAll();
 
-        if (categorias === null) {
-            throw new AppError('Error al recuperar las categorías', 500);
+        // 🔍 Log temporal para espiar qué nos trae la base de datos
+        console.log('🔍 ¿Qué devolvió el repositorio de categorías?:', categorias);
+
+        // Si es null o undefined lanzamos el error, pero permitimos arrays vacíos []
+        if (categorias === null || categorias === undefined) {
+            throw new AppError('Error al recuperar las categorías de la base de datos', 500);
         }
 
         return categorias;
