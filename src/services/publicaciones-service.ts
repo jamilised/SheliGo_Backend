@@ -54,11 +54,20 @@ class PublicacionesService {
 }) => {
     console.log('S1: Entrando a searchPublicaciones en el Service');
     
-    // Acá podrías meter lógica de negocio si hiciera falta en el futuro
-    // Por ahora, le mandamos los filtros directo al repositorio
+    // 1. Llamamos al repositorio usando "this.repository"
     const publicaciones = await this.repository.search(filtros);
     
-    return publicaciones;
+    if (publicaciones === null) {
+        throw new AppError('Error al realizar la búsqueda de publicaciones', 500);
+    }
+
+    // 2. Mapeamos para meterle la URL completa de la foto (igual que hacés en getRecent)
+    const publicacionesConUrlCompleta = publicaciones.map((pub: any) => {
+        pub.foto_principal_url = StorageHelper.buildUrl(pub.foto_principal_url);
+        return pub;
+    });
+    
+    return publicacionesConUrlCompleta;
 }
 }
 
