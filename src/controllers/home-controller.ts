@@ -14,6 +14,7 @@ const getHomeUsuario = async (
             "USER_ID_HOME:",
             process.env.USER_ID_HOME
         );
+
         const usuario = await UsuariosService.getPerfil(
             res.locals.userIdLogged
         );

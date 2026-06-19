@@ -10,8 +10,14 @@ from "./routers/header-router.js";
 import homeRouter
 from "./routers/home-router.js";
 
-import authRouter
+
+import loginRouter
 from './routers/login-router.js'
+
+import registerRouter 
+from "./routers/register-router.js";
+
+import { errorMiddleware } from './middlewares/error-middleware.js';
 
 const app = express();
 
@@ -50,8 +56,17 @@ app.use(
 );
 
 app.use(
-    '/auth',
-    authRouter
+    '/login',
+    loginRouter
 )
+
+app.use(
+    '/register',
+    registerRouter
+)
+
+app.use(
+  errorMiddleware
+);
 
 export default app;
