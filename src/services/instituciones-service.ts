@@ -3,7 +3,7 @@ import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 
 class InstitucionesService {
-    private institucionesRepo = new InstitucionesRepository();
+    private institucionesRepo = InstitucionesRepository;
 
     getRecentInstituciones = async () => {
         const instituciones = await this.institucionesRepo.getRecent();

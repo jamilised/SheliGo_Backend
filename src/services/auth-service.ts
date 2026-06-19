@@ -5,7 +5,7 @@ import { StorageHelper } from '../helpers/storage-helper.js'; // 🚀 Usamos el 
 import AppError from '../errors/app-error.js';
 
 class AuthService {
-    private usuariosRepo = new UsuariosRepository();
+    private usuariosRepo = UsuariosRepository;
 
     login = async (email: string, password: string) => {
         console.log('⚡ SERVICIO AUTH: Iniciando login para:', email);

@@ -4,7 +4,7 @@ import { StorageHelper } from '../helpers/storage-helper.js';
 
 
 class UsuariosService {
-    private usuariosRepo = new UsuariosRepository();
+    private usuariosRepo = UsuariosRepository;
 
     getPerfil = async (id: string | undefined) => {
 

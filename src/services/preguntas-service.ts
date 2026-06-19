@@ -4,8 +4,7 @@ import { StorageHelper } from '../helpers/storage-helper.js'
 
 class PreguntasService {
 
-    repository =
-        new PreguntasRepository()
+    repository = PreguntasRepository;
 
     getPreguntas = async (
         publicacionId: string
