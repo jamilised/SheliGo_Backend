@@ -175,4 +175,4 @@ search = async (filtros: {
 
 }
 
-export default PublicacionesRepository
+export default new PublicacionesRepository
