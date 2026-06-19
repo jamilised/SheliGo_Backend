@@ -117,8 +117,20 @@ search = async (filtros: {
 
     // 2. Agregamos los filtros dinámicamente si vienen informados
     if (filtros.busqueda) {
-        sql += ` AND (p.nombre ILIKE $${paramIndex} OR p.descripcion ILIKE $${paramIndex})`;
-        values.push(`%${filtros.busqueda}%`); // Busca coincidencia parcial sin importar mayúsculas
+        // 1. Limpiamos espacios de más y unimos las palabras con ':*' para que busque prefijos (ej: 'auricular:*')
+        const palabrasClave = filtros.busqueda
+            .trim()
+            .split(/\s+/)
+            .map(palabra => `${palabra}:*`)
+            .join(' & ');
+
+        // 2. Usamos to_tsquery para permitir el operador de prefijo :*
+        sql += ` AND (
+            to_tsvector('spanish', p.nombre || ' ' || COALESCE(p.descripcion, '')) 
+            @@ to_tsquery('spanish', $${paramIndex})
+        )`;
+        
+        values.push(palabrasClave);
         paramIndex++;
     }
 
