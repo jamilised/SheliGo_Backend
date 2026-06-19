@@ -35,4 +35,4 @@ class InstitucionesRepository {
 
 }
 
-export default InstitucionesRepository
+export default new InstitucionesRepository

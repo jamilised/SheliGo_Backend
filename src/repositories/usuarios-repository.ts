@@ -99,4 +99,4 @@ class UsuariosRepository {
 }
 
 
-export default UsuariosRepository
+export default new UsuariosRepository
