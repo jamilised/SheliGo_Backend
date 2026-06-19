@@ -7,7 +7,7 @@ import AppError from '../errors/app-error.js';
 class AuthService {
     private usuariosRepo = new UsuariosRepository();
 
-    login = async (email: string, password_plain: string) => {
+    login = async (email: string, password: string) => {
         console.log('⚡ SERVICIO AUTH: Iniciando login para:', email);
 
         const usuario = await this.usuariosRepo.getByEmail(email);
@@ -15,7 +15,7 @@ class AuthService {
             throw new AppError('Credenciales inválidas', 401);
         }
 
-        const passwordValida = await bcrypt.compare(password_plain, usuario.password_hash);
+        const passwordValida = await bcrypt.compare(password, usuario.password_hash);
         if (!passwordValida) {
             throw new AppError('Credenciales inválidas', 401);
         }
