@@ -4,7 +4,7 @@ import { StorageHelper } from '../helpers/storage-helper.js'
 
 class ArchivosService {
 
-    repository = new ArchivosRepository()
+    repository = ArchivosRepository;
 
     getArchivos = async (
         publicacionId: string

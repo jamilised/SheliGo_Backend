@@ -5,7 +5,7 @@ import { StorageHelper } from '../helpers/storage-helper.js';
 
 class PublicacionesService {
 
-    repository = new PublicacionesRepository()
+    repository = PublicacionesRepository;
 
     getDetalle = async (id: string) => {
 

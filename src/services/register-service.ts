@@ -4,7 +4,7 @@ import UsuariosRepository from '../repositories/usuarios-repository.js'
 import AppError from '../errors/app-error.js'
 
 class AuthService {
-    private usuariosRepo = new UsuariosRepository()
+    private usuariosRepo = UsuariosRepository;
 
     register = async (
         body: any,
