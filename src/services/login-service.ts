@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 
 import AppError from '../errors/app-error.js'
-import AuthRepository from '../repositories/auth-repository.js'
+import AuthRepository from '../repositories/login-repository.js'
 
 class AuthService {
 
