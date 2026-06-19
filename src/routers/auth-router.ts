@@ -9,9 +9,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 // POST /api/auth/login -> Primero valida los datos con Zod, luego va al controller
 router.post(
-    '/login', 
-    validateBody(loginSchema), 
-    authController.login
+    '/register', 
+    upload.any(),
+    validateBody(registerSchema),
+    authController.register
 );
 
 // POST /api/auth/register -> Valida con Zod, atrapa los archivos con Multer y registra

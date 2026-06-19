@@ -46,8 +46,8 @@ app.use(
 
 app.use(express.json());
 
-app.use('/api/auth', authRouter);
-app.use('/api/usuarios', usuariosRouter);
+app.use('/auth', authRouter);
+app.use('/usuarios', usuariosRouter);
 
 app.use(
   "/publicaciones",
