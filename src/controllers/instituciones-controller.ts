@@ -14,6 +14,20 @@ const getRecientes = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
+const getAll = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const instituciones = await institucionesService.getAllInstituciones();
+        
+        return res.status(200).json({
+            status: 'success',
+            data: { instituciones }
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 export default {
-    getRecientes
+    getRecientes,
+    getAll
 };
