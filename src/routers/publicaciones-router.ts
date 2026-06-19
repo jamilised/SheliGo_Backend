@@ -12,6 +12,10 @@ import { authMiddleware } from '../middlewares/authMiddleware.js'
 
 const router = Router()
 
+router.get('/search', 
+    publicacionesController.search
+);
+
 router.get(
     '/:id',
     authMiddleware,
