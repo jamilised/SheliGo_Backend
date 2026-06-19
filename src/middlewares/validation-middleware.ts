@@ -23,16 +23,26 @@ export const validateBody = (schema: z.ZodTypeAny) => {
 /**
  * Middleware genérico para validar los Query Params de una petición
  */
+// Cambiá el tipo del parámetro schema a z.ZodTypeAny 🚀
 export const validateQuery = (schema: z.ZodTypeAny) => {
-    return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            req.query = await schema.parseAsync(req.query) as any;
+            // 1. Validamos los query params originales
+            const validacion = await schema.safeParseAsync(req.query);
+            
+            if (!validacion.success) {
+                throw new AppError(
+                    `Validación de URL incorrecta: ${validacion.error.issues.map(e => e.message).join(', ')}`, 
+                    400
+                );
+            }
+            
+            // 2. Limpiamos y reasignamos de forma segura
+            Object.keys(req.query).forEach(key => delete req.query[key]);
+            Object.assign(req.query, validacion.data);
+            
             return next();
         } catch (error) {
-            if (error instanceof ZodError) {
-                const primerError = error.issues[0]?.message || 'Query params inválidos';
-                return next(new AppError(primerError, 400));
-            }
             return next(error);
         }
     };
