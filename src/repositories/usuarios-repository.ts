@@ -1,4 +1,4 @@
-import DbPg from './db-pg.js'
+import DbPg from '../database/db-pg.js'
 import Usuario from '../entities/usuario.js';
 
 class UsuariosRepository {
