@@ -3,6 +3,7 @@ import multer from 'multer';
 import authController from '../controllers/auth-controller.js';
 import { validateBody } from '../middlewares/validation-middleware.js';
 import { loginSchema, registerSchema } from '../validations/auth-schema.js';
+import { authMiddleware } from '../middlewares/auth-middleware.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -20,6 +21,12 @@ router.post(
     '/login', 
     validateBody(loginSchema),
     authController.login
+);
+
+router.post(
+    '/logout', 
+    authMiddleware, 
+    authController.logout
 );
 
 export default router;
