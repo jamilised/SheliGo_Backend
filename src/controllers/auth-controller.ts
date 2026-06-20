@@ -41,8 +41,20 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
+const logout = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        return res.status(200).json({
+            status: 'success',
+            message: 'Sesión cerrada exitosamente'
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 // Cumple regla: Objeto con funciones flecha para Controllers
 export default {
     login,
-    register
+    register,
+    logout
 };
