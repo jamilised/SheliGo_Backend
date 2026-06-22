@@ -12,8 +12,8 @@ export const loginSchema = z.object({
     email: z.string()
         .min(1, 'El correo electrónico es obligatorio')
         .email('El formato del correo electrónico es inválido')
-        .trim()           // 🚀 Opcional pero recomendado: limpia espacios en el login
-        .toLowerCase(),   // 🚀 Clava en minúsculas para que matchee perfecto
+        .trim()           //  Opcional pero recomendado: limpia espacios en el login
+        .toLowerCase(),   //  Clava en minúsculas para que matchee perfecto
     password: z.string()
         .min(1, 'La contraseña es obligatoria')
 });
@@ -23,18 +23,18 @@ export const registerSchema = z.object({
     nombre: z.string()
         .min(2, 'El nombre debe tener entre 2 y 50 caracteres')
         .max(50, 'El nombre debe tener entre 2 y 50 caracteres')
-        .transform(formatearNombre), // 🚀 Limpia espacios y clava Capitalize
+        .transform(formatearNombre), // Limpia espacios y clava Capitalize
         
     apellido: z.string()
         .min(2, 'El apellido debe tener entre 2 y 50 caracteres')
         .max(50, 'El apellido debe tener entre 2 y 50 caracteres')
-        .transform(formatearNombre), // 🚀 Limpia espacios y clava Capitalize
+        .transform(formatearNombre), // Limpia espacios y clava Capitalize
         
     email: z.string()
         .min(1, 'El correo electrónico es obligatorio')
         .email('El formato del correo electrónico es inválido')
-        .trim()                       // 🚀 Quita espacios locos
-        .toLowerCase(),               // 🚀 Clava todo en minúsculas
+        .trim()                       // Quita espacios locos
+        .toLowerCase(),               // Clava todo en minúsculas
         
     telefono: z.string()
         .regex(/^[0-9]+$/, 'El teléfono debe contener solo números')
