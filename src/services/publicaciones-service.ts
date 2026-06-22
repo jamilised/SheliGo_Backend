@@ -5,7 +5,7 @@ import { StorageHelper } from '../helpers/storage-helper.js';
 
 class PublicacionesService {
 
-    repository = new PublicacionesRepository()
+    repository = PublicacionesRepository;
 
     getDetalle = async (id: string) => {
 
@@ -43,6 +43,32 @@ class PublicacionesService {
         return publicacionesConUrlCompleta;
     };
 
+
+    searchPublicaciones = async (filtros: {
+    busqueda?: string;
+    categoria_id?: string;
+    institucion_id?: string;
+    lugar_institucion?: string;
+    fecha?: string;
+    tipo?: string;
+}) => {
+    console.log('S1: Entrando a searchPublicaciones en el Service');
+    
+    // 1. Llamamos al repositorio usando "this.repository"
+    const publicaciones = await this.repository.search(filtros);
+    
+    if (publicaciones === null) {
+        throw new AppError('Error al realizar la búsqueda de publicaciones', 500);
+    }
+
+    // 2. Mapeamos para meterle la URL completa de la foto (igual que hacés en getRecent)
+    const publicacionesConUrlCompleta = publicaciones.map((pub: any) => {
+        pub.foto_principal_url = StorageHelper.buildUrl(pub.foto_principal_url);
+        return pub;
+    });
+    
+    return publicacionesConUrlCompleta;
+}
 }
 
 export default new PublicacionesService()

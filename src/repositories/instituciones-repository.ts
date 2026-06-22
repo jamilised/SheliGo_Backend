@@ -1,4 +1,4 @@
-import DbPg from './db-pg.js'
+import DbPg from '../database/db-pg.js'
 
 class InstitucionesRepository {
 
@@ -28,11 +28,23 @@ class InstitucionesRepository {
         const result =
             await this.db.queryAll(sql)
 
-        console.log('RESULTADO QUERY INSTITUCIONES:', result)
+        console.log('RESULTADO QUERY 15 INSTITUCIONES:', result)
 
         return result
     }
 
+
+    // Traemos absolutamente todas las instituciones para los selectores
+    getAll = async () => {
+        const sql = `
+        SELECT id, nombre, email, direccion, telefono, foto
+        FROM instituciones
+        ORDER BY nombre ASC
+    `;
+        const result = await this.db.queryAll(sql);
+        console.log('RESULTADO QUERY TODAS INSTITUCIONES:', result)
+        return result;
+    }
 }
 
-export default InstitucionesRepository
+export default new InstitucionesRepository

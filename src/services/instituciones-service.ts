@@ -3,7 +3,7 @@ import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 
 class InstitucionesService {
-    private institucionesRepo = new InstitucionesRepository();
+    private institucionesRepo = InstitucionesRepository;
 
     getRecentInstituciones = async () => {
         const instituciones = await this.institucionesRepo.getRecent();
@@ -20,6 +20,20 @@ class InstitucionesService {
 
         return institucionesConUrlCompleta;
     };
+
+    getAllInstituciones = async () => {
+    const instituciones = await this.institucionesRepo.getAll();
+
+    if (instituciones === null) {
+        throw new AppError('Error al recuperar las instituciones', 500);
+    }
+
+    // Mapeamos las fotos con la URL completa
+    return instituciones.map((inst: any) => {
+        inst.foto = StorageHelper.buildUrl(inst.foto);
+        return inst;
+    });
+};
 }
 
 export default new InstitucionesService;
