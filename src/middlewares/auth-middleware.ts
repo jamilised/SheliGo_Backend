@@ -46,9 +46,6 @@ export const authMiddleware = (
     res.locals.userIdLogged =
       payload.userId
 
-    res.locals.userIdLogged =
-      payload.userId
-
     next()
 
   } catch {
