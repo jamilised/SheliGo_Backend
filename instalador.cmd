@@ -15,3 +15,4 @@ npm install bcrypt
 npm install jsonwebtoken
 npm install -D @types/bcrypt
 npm install -D @types/jsonwebtoken
+npm install --save-dev cross-env
