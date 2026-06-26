@@ -176,6 +176,9 @@ class PublicacionesRepository {
         // 3. Ordenamos por las más nuevas del evento
         sql += ` ORDER BY p.fecha_evento DESC`;
 
+        console.log(sql);
+        console.log(values);
+
         // 4. Ejecutamos usando tu helper db
         const result = await this.db.queryAll(sql, values);
         return result;

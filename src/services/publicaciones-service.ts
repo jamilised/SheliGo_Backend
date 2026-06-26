@@ -57,6 +57,18 @@ class PublicacionesService {
 }) => {
     console.log('S1: Entrando a searchPublicaciones en el Service');
     
+    if (
+            filtros.fecha_desde &&
+            filtros.fecha_hasta &&
+            new Date(filtros.fecha_desde) > new Date(filtros.fecha_hasta)
+        ) {
+            throw new AppError(
+                'La fecha desde no puede ser posterior a la fecha hasta.',
+                400
+            );
+        }
+
+
     // 1. Llamamos al repositorio usando "this.repository"
     const publicaciones = await this.repository.search(filtros);
     
