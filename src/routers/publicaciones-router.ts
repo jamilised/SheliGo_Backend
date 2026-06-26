@@ -14,7 +14,7 @@ router.get('/:id/archivos', authMiddleware, publicacionesController.getArchivos)
 router.get('/:id/preguntas', authMiddleware, publicacionesController.getPreguntas);
 router.post('/:id/preguntas', authMiddleware, publicacionesController.createPregunta);
 
-router.post("/", authMiddleware, upload.array("imagenes",10), publicacionesController.create);
+router.post("/", authMiddleware, upload.array("imagenes",5), publicacionesController.create);
 
 export default router;
 
