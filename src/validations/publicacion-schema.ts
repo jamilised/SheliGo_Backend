@@ -20,8 +20,8 @@ export const searchPublicacionSchema = z.object({
     lugar_institucion: z.string().optional(),
     
     // 🔽 Reemplazamos 'fecha' por el rango:
-    fecha_inicio: fechaValidacion,
-    fecha_fin: fechaValidacion,
+    fecha_desde: fechaValidacion,
+    fecha_hasta: fechaValidacion,
         
     tipo: z.enum(['perdido', 'encontrado'], { message: 'El tipo debe ser perdido o encontrado' }).optional(),
 });

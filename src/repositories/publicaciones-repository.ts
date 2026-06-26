@@ -79,8 +79,8 @@ search = async (filtros: {
     categoria_id?: string;
     institucion_id?: string;
     lugar_institucion?: string;
-    fecha_inicio?: string; // 👈 Cambiado
-    fecha_fin?: string;    // 👈 Cambiado
+    fecha_desde?: string; // 👈 Cambiado
+    fecha_hasta?: string;    // 👈 Cambiado
     tipo?: string; // perdido o encontrado
 }) => {
     console.log('EJECUTANDO: search en PublicacionesRepository con filtros:', filtros);
@@ -159,16 +159,16 @@ search = async (filtros: {
 
     // 🔥 NUEVO RANGO DE FECHAS DINÁMICO
     // Si viene fecha_inicio: la fecha_evento debe ser mayor o igual (>=)
-    if (filtros.fecha_inicio) {
+    if (filtros.fecha_desde) {
         sql += ` AND p.fecha_evento::date >= $${paramIndex}::date`;
-        values.push(filtros.fecha_inicio);
+        values.push(filtros.fecha_desde);
         paramIndex++;
     }
 
     // Si viene fecha_fin: la fecha_evento debe ser menor o igual (<=)
-    if (filtros.fecha_fin) {
+    if (filtros.fecha_hasta) {
         sql += ` AND p.fecha_evento::date <= $${paramIndex}::date`;
-        values.push(filtros.fecha_fin);
+        values.push(filtros.fecha_hasta);
         paramIndex++;
     }
 
