@@ -47,7 +47,6 @@ class PublicacionesService {
 
 
     searchPublicaciones = async (filtros: {
-<<<<<<< HEAD
     busqueda?: string;
     categoria_id?: string;
     institucion_id?: string;
@@ -63,21 +62,6 @@ class PublicacionesService {
     
     if (publicaciones === null) {
         throw new AppError('Error al realizar la búsqueda de publicaciones', 500);
-=======
-        busqueda?: string;
-        categoria_id?: string;
-        institucion_id?: string;
-        lugar_institucion?: string;
-        fecha?: string;
-        tipo?: string;
-    }) => {
-        console.log('S1: Entrando a searchPublicaciones en el Service');
-
-        // 1. Llamamos al repositorio usando "this.repository"
-        const publicaciones = await this.repository.search(filtros);
-
-        if (publicaciones === null) {
-            throw new AppError('Error al realizar la búsqueda de publicaciones', 500);
         }
 
         // 2. Mapeamos para meterle la URL completa de la foto (igual que hacés en getRecent)
@@ -87,7 +71,6 @@ class PublicacionesService {
         });
 
         return publicacionesConUrlCompleta;
->>>>>>> a5aaf803ce624ad3fdc137c87ade29ec0c65cdc1
     }
 
     createPublicacion = async (
