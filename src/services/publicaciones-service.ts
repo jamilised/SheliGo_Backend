@@ -49,7 +49,8 @@ class PublicacionesService {
     categoria_id?: string;
     institucion_id?: string;
     lugar_institucion?: string;
-    fecha?: string;
+    fecha_inicio?: string;
+    fecha_fin?: string;
     tipo?: string;
 }) => {
     console.log('S1: Entrando a searchPublicaciones en el Service');
