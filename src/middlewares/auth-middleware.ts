@@ -43,6 +43,8 @@ export const authMiddleware = (
       process.env.JWT_SECRET!
     ) as jwt.JwtPayload
 
+    console.log(payload);
+
     res.locals.userIdLogged =
       payload.userId
 
