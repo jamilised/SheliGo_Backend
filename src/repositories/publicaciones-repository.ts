@@ -195,11 +195,14 @@ class PublicacionesRepository {
             descripcion,
             fecha_evento,
             tipo,
-            lugar_institucion
+            estado,
+            lugar_institucion,
+            created_at,
+            updated_at
         )
         VALUES
         (
-            $1,$2,$3,$4,$5,$6,$7,$8
+            $1,$2,$3,$4,$5,$6,$7,$8, $9, NOW(), NOW()
         )
         RETURNING *
     `;
@@ -212,6 +215,7 @@ class PublicacionesRepository {
             p.descripcion,
             p.fecha_evento,
             p.tipo,
+            p.estado,
             p.lugar_institucion
         ]);
     }
