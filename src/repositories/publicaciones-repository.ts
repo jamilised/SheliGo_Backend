@@ -74,28 +74,16 @@ class PublicacionesRepository {
         return result
     }
 
-<<<<<<< HEAD
-search = async (filtros: {
-    busqueda?: string;
-    categoria_id?: string;
-    institucion_id?: string;
-    lugar_institucion?: string;
-    fecha_desde?: string; // 👈 Cambiado
-    fecha_hasta?: string;    // 👈 Cambiado
-    tipo?: string; // perdido o encontrado
-}) => {
-    console.log('EJECUTANDO: search en PublicacionesRepository con filtros:', filtros);
-=======
     search = async (filtros: {
         busqueda?: string;
         categoria_id?: string;
         institucion_id?: string;
         lugar_institucion?: string;
-        fecha?: string;
+        fecha_desde?: string; // 👈 Cambiado
+        fecha_hasta?: string;    // 👈 Cambiado
         tipo?: string; // perdido o encontrado
     }) => {
         console.log('EJECUTANDO: search en PublicacionesRepository con filtros:', filtros);
->>>>>>> a5aaf803ce624ad3fdc137c87ade29ec0c65cdc1
 
         // 1. La base de la query con los mismos JOINs que usás en getRecent
         let sql = `
@@ -128,29 +116,15 @@ search = async (filtros: {
         const values: any[] = [];
         let paramIndex = 1;
 
-<<<<<<< HEAD
-    // 2. Agregamos los filtros dinámicamente si vienen informados
-    if (filtros.busqueda) {
-        const palabrasClave = filtros.busqueda
-            .trim()
-            .split(/\s+/)
-            .map(palabra => `${palabra}:*`)
-            .join(' & ');
-
-        sql += ` AND (
-=======
         // 2. Agregamos los filtros dinámicamente si vienen informados
         if (filtros.busqueda) {
-            // 1. Limpiamos espacios de más y unimos las palabras con ':*' para que busque prefijos (ej: 'auricular:*')
             const palabrasClave = filtros.busqueda
                 .trim()
                 .split(/\s+/)
                 .map(palabra => `${palabra}:*`)
                 .join(' & ');
 
-            // 2. Usamos to_tsquery para permitir el operador de prefijo :*
             sql += ` AND (
->>>>>>> a5aaf803ce624ad3fdc137c87ade29ec0c65cdc1
             to_tsvector('spanish', p.nombre || ' ' || COALESCE(p.descripcion, '')) 
             @@ to_tsquery('spanish', $${paramIndex})
         )`;
@@ -164,6 +138,7 @@ search = async (filtros: {
             values.push(filtros.categoria_id);
             paramIndex++;
         }
+
 
         if (filtros.institucion_id) {
             sql += ` AND p.institucion_id = $${paramIndex}`;
@@ -183,10 +158,18 @@ search = async (filtros: {
             paramIndex++;
         }
 
-        if (filtros.fecha) {
-            // Filtra por el día específico sin importar la hora exacta
-            sql += ` AND p.fecha_evento::date = $${paramIndex}::date`;
-            values.push(filtros.fecha);
+        // 🔥 NUEVO RANGO DE FECHAS DINÁMICO
+        // Si viene fecha_inicio: la fecha_evento debe ser mayor o igual (>=)
+        if (filtros.fecha_desde) {
+            sql += ` AND p.fecha_evento::date >= $${paramIndex}::date`;
+            values.push(filtros.fecha_desde);
+            paramIndex++;
+        }
+
+        // Si viene fecha_fin: la fecha_evento debe ser menor o igual (<=)
+        if (filtros.fecha_hasta) {
+            sql += ` AND p.fecha_evento::date <= $${paramIndex}::date`;
+            values.push(filtros.fecha_hasta);
             paramIndex++;
         }
 
@@ -244,51 +227,6 @@ search = async (filtros: {
             p.lugar_institucion
         ]);
     }
-<<<<<<< HEAD
-
-    if (filtros.institucion_id) {
-        sql += ` AND p.institucion_id = $${paramIndex}`;
-        values.push(filtros.institucion_id);
-        paramIndex++;
-    }
-
-    if (filtros.lugar_institucion) {
-        sql += ` AND p.lugar_institucion ILIKE $${paramIndex}`;
-        values.push(`%${filtros.lugar_institucion}%`);
-        paramIndex++;
-    }
-
-    if (filtros.tipo) {
-        sql += ` AND p.tipo = $${paramIndex}`;
-        values.push(filtros.tipo);
-        paramIndex++;
-    }
-
-    // 🔥 NUEVO RANGO DE FECHAS DINÁMICO
-    // Si viene fecha_inicio: la fecha_evento debe ser mayor o igual (>=)
-    if (filtros.fecha_desde) {
-        sql += ` AND p.fecha_evento::date >= $${paramIndex}::date`;
-        values.push(filtros.fecha_desde);
-        paramIndex++;
-    }
-
-    // Si viene fecha_fin: la fecha_evento debe ser menor o igual (<=)
-    if (filtros.fecha_hasta) {
-        sql += ` AND p.fecha_evento::date <= $${paramIndex}::date`;
-        values.push(filtros.fecha_hasta);
-        paramIndex++;
-    }
-
-    // 3. Ordenamos por las más nuevas del evento
-    sql += ` ORDER BY p.fecha_evento DESC`;
-
-    // 4. Ejecutamos usando tu helper db
-    const result = await this.db.queryAll(sql, values);
-    return result;
-}
-
-=======
->>>>>>> a5aaf803ce624ad3fdc137c87ade29ec0c65cdc1
 }
 
 export default new PublicacionesRepository
