@@ -87,11 +87,39 @@ const createPregunta = async (req: Request, res: Response, next: NextFunction) =
     }
 };
 
+const create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+
+        const publicacion =
+            await publicacionesService.createPublicacion(
+                req.body,
+                req.files,
+                res.locals.userIdLogged
+            );
+
+        return res.status(201).json({
+            status: "success",
+            data: {
+                publicacion
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 export default {
     getRecientes,
     search,
     getDetalle,
     getArchivos,
     getPreguntas,
-    createPregunta
+    createPregunta,
+    create
 };
+
