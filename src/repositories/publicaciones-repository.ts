@@ -79,7 +79,8 @@ search = async (filtros: {
     categoria_id?: string;
     institucion_id?: string;
     lugar_institucion?: string;
-    fecha?: string;
+    fecha_inicio?: string; // 👈 Cambiado
+    fecha_fin?: string;    // 👈 Cambiado
     tipo?: string; // perdido o encontrado
 }) => {
     console.log('EJECUTANDO: search en PublicacionesRepository con filtros:', filtros);
@@ -117,14 +118,12 @@ search = async (filtros: {
 
     // 2. Agregamos los filtros dinámicamente si vienen informados
     if (filtros.busqueda) {
-        // 1. Limpiamos espacios de más y unimos las palabras con ':*' para que busque prefijos (ej: 'auricular:*')
         const palabrasClave = filtros.busqueda
             .trim()
             .split(/\s+/)
             .map(palabra => `${palabra}:*`)
             .join(' & ');
 
-        // 2. Usamos to_tsquery para permitir el operador de prefijo :*
         sql += ` AND (
             to_tsvector('spanish', p.nombre || ' ' || COALESCE(p.descripcion, '')) 
             @@ to_tsquery('spanish', $${paramIndex})
@@ -158,10 +157,18 @@ search = async (filtros: {
         paramIndex++;
     }
 
-    if (filtros.fecha) {
-        // Filtra por el día específico sin importar la hora exacta
-        sql += ` AND p.fecha_evento::date = $${paramIndex}::date`;
-        values.push(filtros.fecha);
+    // 🔥 NUEVO RANGO DE FECHAS DINÁMICO
+    // Si viene fecha_inicio: la fecha_evento debe ser mayor o igual (>=)
+    if (filtros.fecha_inicio) {
+        sql += ` AND p.fecha_evento::date >= $${paramIndex}::date`;
+        values.push(filtros.fecha_inicio);
+        paramIndex++;
+    }
+
+    // Si viene fecha_fin: la fecha_evento debe ser menor o igual (<=)
+    if (filtros.fecha_fin) {
+        sql += ` AND p.fecha_evento::date <= $${paramIndex}::date`;
+        values.push(filtros.fecha_fin);
         paramIndex++;
     }
 
