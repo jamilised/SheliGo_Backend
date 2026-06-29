@@ -47,17 +47,17 @@ class PublicacionesService {
 
 
     searchPublicaciones = async (filtros: {
-    busqueda?: string;
-    categoria_id?: string;
-    institucion_id?: string;
-    lugar_institucion?: string;
-    fecha_desde?: string;
-    fecha_hasta?: string;
-    tipo?: string;
-}) => {
-    console.log('S1: Entrando a searchPublicaciones en el Service');
-    
-    if (
+        busqueda?: string;
+        categoria_id?: string;
+        institucion_id?: string;
+        lugar_institucion?: string;
+        fecha_desde?: string;
+        fecha_hasta?: string;
+        tipo?: string;
+    }) => {
+        console.log('S1: Entrando a searchPublicaciones en el Service');
+
+        if (
             filtros.fecha_desde &&
             filtros.fecha_hasta &&
             new Date(filtros.fecha_desde) > new Date(filtros.fecha_hasta)
@@ -69,11 +69,11 @@ class PublicacionesService {
         }
 
 
-    // 1. Llamamos al repositorio usando "this.repository"
-    const publicaciones = await this.repository.search(filtros);
-    
-    if (publicaciones === null) {
-        throw new AppError('Error al realizar la búsqueda de publicaciones', 500);
+        // 1. Llamamos al repositorio usando "this.repository"
+        const publicaciones = await this.repository.search(filtros);
+
+        if (publicaciones === null) {
+            throw new AppError('Error al realizar la búsqueda de publicaciones', 500);
         }
 
         // 2. Mapeamos para meterle la URL completa de la foto (igual que hacés en getRecent)
@@ -138,6 +138,41 @@ class PublicacionesService {
         }
 
         return publicacion;
+    }
+
+    remove = async (
+        publicacionId: string,
+        usuarioId: string
+    ) => {
+
+        const publicacion =
+            await this.repository.getById(publicacionId);
+
+        if (!publicacion) {
+            throw new NotFoundError(
+                "Publicación no encontrada"
+            );
+        }
+
+        if (publicacion.usuario_id !== usuarioId) {
+            throw new AppError(
+                "No tienes permisos para eliminar esta publicación",
+                403
+            );
+        }
+
+        const archivos =
+            await this.archivosRepository.getByPublicacionId(publicacionId) || [];
+
+        for (const archivo of archivos) {
+
+            // luego implementaremos borrar de Supabase
+            // StorageHelper.delete(archivo.url)
+
+        }
+
+        await this.repository.delete(publicacionId);
+
     }
 }
 

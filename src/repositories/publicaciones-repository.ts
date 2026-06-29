@@ -74,6 +74,18 @@ class PublicacionesRepository {
         return result
     }
 
+    delete = async (id: string) => {
+
+        const sql = `
+            DELETE FROM publicaciones
+            WHERE id = $1
+            RETURNING id
+        `;
+
+        return await this.db.queryOne(sql, [id]);
+
+    }
+
     search = async (filtros: {
         busqueda?: string;
         categoria_id?: string;
@@ -230,6 +242,7 @@ class PublicacionesRepository {
             p.lugar_institucion
         ]);
     }
+    
 }
 
 export default new PublicacionesRepository

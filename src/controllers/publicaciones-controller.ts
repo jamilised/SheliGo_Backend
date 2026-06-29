@@ -113,6 +113,30 @@ const create = async (
     }
 };
 
+const remove = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+
+        const id = req.params.id as string;
+
+        await publicacionesService.remove(
+            id,
+            res.locals.userIdLogged
+        );
+
+        return res.status(200).json({
+            status: "success",
+            message: "Publicación eliminada correctamente"
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 export default {
     getRecientes,
     search,
@@ -120,6 +144,7 @@ export default {
     getArchivos,
     getPreguntas,
     createPregunta,
-    create
+    create,
+    remove
 };
 
