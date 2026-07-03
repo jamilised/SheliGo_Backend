@@ -137,6 +137,44 @@ const remove = async (
     }
 };
 
+
+const createRespuesta = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+
+    try {
+
+        const preguntaId =
+            req.params.preguntaId as string;
+
+        const usuarioId =
+            res.locals.userIdLogged;
+
+        const { contenido } = req.body;
+
+        const respuesta =
+            await preguntasService.createRespuesta(
+                preguntaId,
+                usuarioId,
+                contenido
+            );
+
+        return res.status(201).json({
+            status: "success",
+            message: "Respuesta creada correctamente",
+            data: {
+                respuesta
+            }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+
+};
+
 export default {
     getRecientes,
     search,
@@ -144,6 +182,7 @@ export default {
     getArchivos,
     getPreguntas,
     createPregunta,
+    createRespuesta,
     create,
     remove
 };

@@ -19,7 +19,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 
 const register = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('⚡ CONTROLLER AUTH: Iniciando registro');
+        console.log('CONTROLLER AUTH: Iniciando registro');
         
         const nuevoUsuario = await authService.register(req.body, req.files);
 
@@ -55,7 +55,7 @@ const logout = async (req: Request, res: Response, next: NextFunction) => {
 
 const loginConGoogle = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('🌐 [AUTH CONTROLLER]: Procesando token de Supabase Google');
+        console.log('[AUTH CONTROLLER]: Procesando token de Supabase Google');
         
         const authHeader = req.headers.authorization;
         const tokenSupabase = authHeader?.split(' ')[1];
@@ -74,7 +74,7 @@ const loginConGoogle = async (req: Request, res: Response, next: NextFunction) =
         const { data: { user }, error } = await supabase.auth.getUser(tokenSupabase);
 
         if (error || !user) {
-            console.error('❌ Token de Google/Supabase inválido:', error?.message);
+            console.error('Token de Google/Supabase inválido:', error?.message);
             return res.status(401).json({ 
                 status: 'error', 
                 message: 'Token de Google/Supabase inválido o expirado.' 
