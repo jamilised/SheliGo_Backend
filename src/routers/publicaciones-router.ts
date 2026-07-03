@@ -13,6 +13,8 @@ router.get('/:id', authMiddleware, publicacionesController.getDetalle);
 router.get('/:id/archivos', authMiddleware, publicacionesController.getArchivos);
 router.get('/:id/preguntas', authMiddleware, publicacionesController.getPreguntas);
 router.post('/:id/preguntas', authMiddleware, publicacionesController.createPregunta);
+router.post("/preguntas/:preguntaId/respuesta", authMiddleware, publicacionesController.createRespuesta);
+
 router.delete("/:id", authMiddleware, publicacionesController.remove);
 
 router.post("/", authMiddleware, upload.array("imagenes",5), publicacionesController.create);

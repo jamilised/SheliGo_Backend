@@ -26,6 +26,59 @@ class PreguntasRepository {
         `;
         return await this.db.queryOne(sql, [publicacionId, usuarioId, contenido]);
     }
+
+    getById = async (preguntaId: string) => {
+
+        const sql = `
+        SELECT *
+        FROM preguntas
+        WHERE id = $1
+    `;
+
+        return await this.db.queryOne(sql, [preguntaId]);
+
+    }
+
+    existsRespuesta = async (preguntaId: string) => {
+
+        const sql = `
+        SELECT id
+        FROM respuestas
+        WHERE pregunta_id = $1
+    `;
+
+        return await this.db.queryOne(sql, [preguntaId]);
+
+    }
+
+    createRespuesta = async (
+        preguntaId: string,
+        usuarioId: string,
+        contenido: string
+    ) => {
+
+        const sql = `
+        INSERT INTO respuestas
+        (
+            pregunta_id,
+            usuario_id,
+            contenido
+        )
+        VALUES
+        (
+            $1,
+            $2,
+            $3
+        )
+        RETURNING *
+    `;
+
+        return await this.db.queryOne(sql, [
+            preguntaId,
+            usuarioId,
+            contenido
+        ]);
+    } 
 }
 
 export default new PreguntasRepository(); // 🚀 Instancia directa
