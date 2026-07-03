@@ -67,7 +67,6 @@ const loginConGoogle = async (req: Request, res: Response, next: NextFunction) =
             });
         }
 
-        // Importamos supabase dinámicamente tal cual lo tenías armado
         const { supabase } = await import('../database/supabase.js'); 
         
         // 1. Validamos el token contra los servidores de Supabase
@@ -81,21 +80,57 @@ const loginConGoogle = async (req: Request, res: Response, next: NextFunction) =
             });
         }
 
-        // 2. Formateamos el usuario para que coincida exactamente con lo que el frontend espera
+        // 🚀 2. VERIFICAMOS SI EL USUARIO YA EXISTE EN NUESTRA TABLA
+        let usuarioLocal = await authService['usuariosRepo'].getById(user.id);
+
+        // 🚀 3. SI NO EXISTE, LO CREAMOS POR CÓDIGO (PRIMERA VEZ)
+        if (!usuarioLocal) {
+            console.log(`[AUTH CONTROLLER]: Usuario nuevo detectado (${user.email}). Registrando en tabla usuarios...`);
+            
+            const fullName = (user.user_metadata.full_name || user.user_metadata.name || 'Usuario Google').trim();
+            let primerNombre = fullName;
+            let elApellido = ' '; // Espacio vacío por si es requerido
+
+            // Lógica idéntica de separación por espacios
+            const espacioIndex = fullName.indexOf(' ');
+            if (espacioIndex > 0) {
+                primerNombre = fullName.substring(0, espacioIndex);
+                elApellido = fullName.substring(espacioIndex + 1);
+            }
+
+            usuarioLocal = await authService['usuariosRepo'].create({
+                id: user.id, // Forzamos el mismo UID de Supabase
+                nombre: primerNombre,
+                apellido: elApellido,
+                email: user.email!,
+                telefono: null, // Queda en null
+                rol: 'user', // Forzado a user
+                password_hash: null // Al ser de Google no lleva pass
+            });
+
+            if (!usuarioLocal) {
+                throw new Error('Error al sincronizar el usuario de Google en la base de datos local.');
+            }
+        }
+
+        // 4. Formateamos la respuesta final utilizando los datos de TU base de datos
         const usuarioFormateado = {
-            id: user.id,
-            nombre: user.user_metadata.full_name || user.user_metadata.name || 'Usuario de Google',
-            foto: user.user_metadata.avatar_url || ''
+            id: usuarioLocal.id,
+            nombre: usuarioLocal.nombre,
+            apellido: usuarioLocal.apellido,
+            email: usuarioLocal.email,
+            rol: usuarioLocal.rol,
+            foto: usuarioLocal.foto // Será 'usuarios/default.png'
         };
 
-        // 3. GENERAMOS TU PROPIO TOKEN FIRMADO (El que pasa tu authMiddleware)
+        // 5. GENERAMOS TU PROPIO TOKEN FIRMADO
         const tuPropioToken = jwt.sign(
-            { userId: user.id }, 
+            { userId: usuarioLocal.id }, 
             process.env.JWT_SECRET!,
             { expiresIn: '24h' }
         );
 
-        // 4. Devolvemos la respuesta bajo la estructura standar (response.data.data)
+        // 6. Devolvemos la respuesta unificada
         return res.status(200).json({
             status: 'success',
             data: {
