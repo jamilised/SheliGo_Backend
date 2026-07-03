@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import authService from '../services/auth-service.js';
+import jwt from 'jsonwebtoken';
 
 const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -54,37 +55,61 @@ const logout = async (req: Request, res: Response, next: NextFunction) => {
 
 const loginConGoogle = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('🌐 [AUTH CONTROLLER]: Generando URL para OAuth de Google');
+        console.log('🌐 [AUTH CONTROLLER]: Procesando token de Supabase Google');
         
-        // Traemos supabase de forma dinámica acá adentro con const
-        const { supabase } = await import('../database/supabase.js'); 
-        
-        const { data, error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: 'http://localhost:5173/oauth/callback', 
-                queryParams: {
-                    access_type: 'offline',
-                    prompt: 'select_account',
-                },
-            },
-        });
+        const authHeader = req.headers.authorization;
+        const tokenSupabase = authHeader?.split(' ')[1];
 
-        if (error) {
-            console.error('❌ Error de Supabase en Google Auth:', error.message);
-            return res.status(400).json({ status: 'error', message: error.message });
+        if (!tokenSupabase) {
+            return res.status(401).json({ 
+                status: 'error', 
+                message: 'No se proporcionó el token de Supabase en las cabeceras.' 
+            });
         }
 
+        // Importamos supabase dinámicamente tal cual lo tenías armado
+        const { supabase } = await import('../database/supabase.js'); 
+        
+        // 1. Validamos el token contra los servidores de Supabase
+        const { data: { user }, error } = await supabase.auth.getUser(tokenSupabase);
+
+        if (error || !user) {
+            console.error('❌ Token de Google/Supabase inválido:', error?.message);
+            return res.status(401).json({ 
+                status: 'error', 
+                message: 'Token de Google/Supabase inválido o expirado.' 
+            });
+        }
+
+        // 2. Formateamos el usuario para que coincida exactamente con lo que el frontend espera
+        const usuarioFormateado = {
+            id: user.id,
+            nombre: user.user_metadata.full_name || user.user_metadata.name || 'Usuario de Google',
+            foto: user.user_metadata.avatar_url || ''
+        };
+
+        // 3. GENERAMOS TU PROPIO TOKEN FIRMADO (El que pasa tu authMiddleware)
+        const tuPropioToken = jwt.sign(
+            { userId: user.id }, 
+            process.env.JWT_SECRET!,
+            { expiresIn: '24h' }
+        );
+
+        // 4. Devolvemos la respuesta bajo la estructura standar (response.data.data)
         return res.status(200).json({
             status: 'success',
-            data: { url: data.url }
+            data: {
+                token: tuPropioToken,
+                usuario: usuarioFormateado
+            }
         });
+
     } catch (error) {
         return next(error);
     }
 };
 
-// Cumple regla: Objeto con funciones flecha para Controllers
+// Cumple regla: Objeto con funciones para Controllers
 export default {
     login,
     register,
