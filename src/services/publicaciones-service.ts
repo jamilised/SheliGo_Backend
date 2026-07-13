@@ -3,6 +3,8 @@ import NotFoundError from '../errors/not-found-error.js'
 import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 import ArchivosRepository from '../repositories/archivos-repository.js';
+import CategoriasRepository from '../repositories/categorias-repository.js';
+import InstitucionesRepository from '../repositories/archivos-repository.js';
 
 class PublicacionesService {
 
