@@ -49,15 +49,13 @@ export const createPublicacionSchema = z.object({
         .transform(limpiarTexto),
 
     fecha_evento: z.string()
-        .regex(
-            /^\d{4}-\d{2}-\d{2}$/,
-            "Formato de fecha debe ser YYYY-MM-DD"
-        )
-        .refine((valor) => {
-            return !isNaN(Date.parse(valor));
-        }, {
-            message: "La fecha ingresada no es válida"
-        }),
+    .regex(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/,
+        "La fecha tiene un formato inválido"
+    )
+    .refine(valor => !isNaN(Date.parse(valor)), {
+        message: "La fecha ingresada no es válida"
+    }),
 
     tipo: z.enum(
         ["perdido", "encontrado"],
