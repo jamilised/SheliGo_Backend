@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import publicacionesController from '../controllers/publicaciones-controller.js';
 import { authMiddleware } from '../middlewares/auth-middleware.js';
-import { validateQuery } from '../middlewares/validation-middleware.js';
-import { searchPublicacionSchema } from '../validations/publicacion-schema.js';
+import { validateQuery, validateBody } from '../middlewares/validation-middleware.js';
+import { searchPublicacionSchema, createPublicacionSchema } from '../validations/publicacion-schema.js';
 import upload from "../middlewares/upload-middleware.js";
 
 const router = Router();
@@ -17,7 +17,7 @@ router.post("/preguntas/:preguntaId/respuesta", authMiddleware, publicacionesCon
 
 router.delete("/:id", authMiddleware, publicacionesController.remove);
 
-router.post("/", authMiddleware, upload.array("imagenes",5), publicacionesController.create);
+router.post("/", authMiddleware, upload.array("imagenes",5), validateBody(createPublicacionSchema), publicacionesController.create);
 
 export default router;
 

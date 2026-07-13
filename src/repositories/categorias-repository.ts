@@ -16,6 +16,18 @@ class CategoriasRepository {
             return null;
         }
     }
+
+    getById = async (id: string) => {
+
+    const sql = `
+        SELECT id
+        FROM categorias
+        WHERE id = $1
+    `;
+
+    return await this.db.queryOne(sql, [id]);
+
+}
 }
 
 export default new CategoriasRepository(); // 🚀 Todo sin tildes y seguro
