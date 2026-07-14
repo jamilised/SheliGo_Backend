@@ -27,25 +27,6 @@ class ChatRepository {
         return await this.db.queryOne(sql, [salaId, usuarioId]);
     };
 
-    // 4. Trae todas las salas de un usuario con los datos de la OTRA persona (para armar la lista tipo WhatsApp)
-    getSalasPorUsuario = async (usuarioId: string) => {
-        const sql = `
-            SELECT 
-                s.id AS sala_id,
-                u.id AS otro_usuario_id,
-                u.nombre AS otro_usuario_nombre,
-                u.apellido AS otro_usuario_apellido,
-                u.foto AS otro_usuario_foto
-            FROM salas_chat s
-            JOIN participantes_sala p1 ON s.id = p1.sala_id
-            JOIN participantes_sala p2 ON s.id = p2.sala_id AND p2.usuario_id != p1.usuario_id
-            JOIN usuarios u ON p2.usuario_id = u.id
-            WHERE p1.usuario_id = $1
-            ORDER BY s.created_at DESC;
-        `;
-        return await this.db.queryAll(sql, [usuarioId]);
-    };
-
     // 5. Trae el historial de mensajes de una sala ordenados cronológicamente
     getMensajesPorSala = async (salaId: string) => {
         const sql = `
@@ -72,6 +53,50 @@ class ChatRepository {
         const sql = `SELECT 1 FROM participantes_sala WHERE sala_id = $1 AND usuario_id = $2;`;
         const res = await this.db.queryOne(sql, [salaId, usuarioId]);
         return !!res;
+    };
+
+    // 4. Trae las salas del usuario con soporte para filtrar leídos / no leídos
+    getSalasPorUsuario = async (usuarioId: string, filtro?: string) => {
+        let sql = `
+            SELECT 
+                s.id AS sala_id,
+                u.id AS otro_usuario_id,
+                u.nombre AS otro_usuario_nombre,
+                u.apellido AS otro_usuario_apellido,
+                u.foto AS otro_usuario_foto,
+                -- Traemos información del último mensaje para ordenar y mostrar en la lista
+                (SELECT m.contenido FROM mensajes m WHERE m.sala_id = s.id ORDER BY m.created_at DESC LIMIT 1) AS ultimo_mensaje,
+                (SELECT m.created_at FROM mensajes m WHERE m.sala_id = s.id ORDER BY m.created_at DESC LIMIT 1) AS ultimo_mensaje_fecha,
+                (SELECT COUNT(*) FROM mensajes m WHERE m.sala_id = s.id AND m.emisor_id != $1 AND m.leido = false) AS mensajes_sin_leer
+            FROM salas_chat s
+            JOIN participantes_sala p1 ON s.id = p1.sala_id
+            JOIN participantes_sala p2 ON s.id = p2.sala_id AND p2.usuario_id != p1.usuario_id
+            JOIN usuarios u ON p2.usuario_id = u.id
+            WHERE p1.usuario_id = $1
+        `;
+
+        // Aplicamos el filtro si viene
+        if (filtro === 'leidas') {
+            sql += ` AND (SELECT COUNT(*) FROM mensajes m WHERE m.sala_id = s.id AND m.emisor_id != $1 AND m.leido = false) = 0`;
+        } else if (filtro === 'no_leidas') {
+            sql += ` AND (SELECT COUNT(*) FROM mensajes m WHERE m.sala_id = s.id AND m.emisor_id != $1 AND m.leido = false) > 0`;
+        }
+
+        sql += ` ORDER BY ultimo_mensaje_fecha DESC NULLS LAST;`;
+
+        return await this.db.queryAll(sql, [usuarioId]);
+    };
+
+    // 8. Elimina un mensaje físico de la DB
+    eliminarMensaje = async (mensajeId: string) => {
+        const sql = `DELETE FROM mensajes WHERE id = $1 RETURNING id, sala_id;`;
+        return await this.db.queryOne(sql, [mensajeId]);
+    };
+
+    // 9. Obtener un mensaje por ID (para validar autoría antes de borrar)
+    getMensajeById = async (mensajeId: string) => {
+        const sql = `SELECT id, emisor_id, sala_id FROM mensajes WHERE id = $1;`;
+        return await this.db.queryOne(sql, [mensajeId]);
     };
 }
 
