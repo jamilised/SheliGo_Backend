@@ -19,4 +19,7 @@ router.get('/salas/:id/mensajes', chatController.getMensajesSala);
 // 4. POST /api/chat/mensaje -> Enviar un mensaje nuevo
 router.post('/mensaje', chatController.enviarMensaje);
 
+// 5. DELETE /api/chat/mensaje/:id -> Eliminar un mensaje específico
+router.delete('/mensaje/:id', chatController.eliminarMensaje);
+
 export default router;
