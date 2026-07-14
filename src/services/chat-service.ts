@@ -4,12 +4,6 @@ import AppError from '../errors/app-error.js';
 class ChatService {
     private chatRepo = ChatRepository;
 
-    // Obtener la lista de chats/salas de un usuario
-    obtenerMisSalas = async (usuarioId: string) => {
-        console.log(`⚡ SERVICIO CHAT: Buscando salas para el usuario ${usuarioId}`);
-        return await this.chatRepo.getSalasPorUsuario(usuarioId);
-    };
-
     // Obtener o Crear una sala entre el usuario logueado y otro usuario
     obtenerOCrearSala = async (usuarioLogueadoId: string, otroUsuarioId: string) => {
         console.log(`⚡ SERVICIO CHAT: Buscando o creando sala entre ${usuarioLogueadoId} y ${otroUsuarioId}`);
@@ -62,6 +56,29 @@ class ChatService {
         }
 
         return await this.chatRepo.enviarMensaje(salaId, emisorId, contenido.trim());
+    };
+
+    // Obtener la lista de chats/salas de un usuario con filtros opcionales
+    obtenerMisSalas = async (usuarioId: string, filtro?: string) => {
+        console.log(`⚡ SERVICIO CHAT: Buscando salas para el usuario ${usuarioId} con filtro: ${filtro || 'todas'}`);
+        return await this.chatRepo.getSalasPorUsuario(usuarioId, filtro);
+    };
+
+    // Eliminar un mensaje validando que el emisor sea el dueño
+    eliminarMensaje = async (mensajeId: string, usuarioId: string) => {
+        console.log(`⚡ SERVICIO CHAT: Intentando eliminar mensaje ${mensajeId} por usuario ${usuarioId}`);
+
+        const mensaje = await this.chatRepo.getMensajeById(mensajeId);
+        if (!mensaje) {
+            throw new AppError('El mensaje que intentás eliminar no existe.', 404);
+        }
+
+        // Seguridad: Solo el dueño del mensaje puede borrarlo
+        if (mensaje.emisor_id !== usuarioId) {
+            throw new AppError('No tenés permisos para eliminar este mensaje.', 403);
+        }
+
+        return await this.chatRepo.eliminarMensaje(mensajeId);
     };
 }
 
