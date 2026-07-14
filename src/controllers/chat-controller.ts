@@ -1,21 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import ChatService from '../services/chat-service.js';
 
-const getMisSalas = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const usuarioId = res.locals.userIdLogged as string; 
-
-        const salas = await ChatService.obtenerMisSalas(usuarioId);
-
-        return res.status(200).json({
-            status: 'success',
-            data: salas
-        });
-    } catch (error) {
-        return next(error);
-    }
-};
-
 const abrirOCrearChat = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const usuarioLogueadoId = res.locals.userIdLogged as string;
@@ -83,11 +68,55 @@ const enviarMensaje = async (req: Request, res: Response, next: NextFunction) =>
     } catch (error) {
         return next(error);
     }
+    
+};
+
+const getMisSalas = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const usuarioId = res.locals.userIdLogged as string; 
+        
+        // 🚀 Leemos el query parameter de la URL (ej: /api/chat/salas?filtro=no_leidas)
+        const filtro = req.query.filtro as string | undefined;
+
+        const salas = await ChatService.obtenerMisSalas(usuarioId, filtro);
+
+        return res.status(200).json({
+            status: 'success',
+            data: salas
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const eliminarMensaje = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const usuarioId = res.locals.userIdLogged as string;
+        const { id: mensajeId } = req.params;
+
+        if (!mensajeId) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'El ID del mensaje es obligatorio.'
+            });
+        }
+
+        const mensajeEliminado = await ChatService.eliminarMensaje(mensajeId as string, usuarioId);
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Mensaje eliminado correctamente.',
+            data: mensajeEliminado
+        });
+    } catch (error) {
+        return next(error);
+    }
 };
 
 export default {
     getMisSalas,
     abrirOCrearChat,
     getMensajesSala,
-    enviarMensaje
+    enviarMensaje,
+    eliminarMensaje
 };
