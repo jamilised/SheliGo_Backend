@@ -73,7 +73,7 @@ app.use(
 );
 
 app.use(
-  '/api/chat', 
+  '/chat', 
   chatRouter
 );
 
