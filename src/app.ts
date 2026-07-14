@@ -16,7 +16,11 @@ import categoriasRouter
 import institucionesRouter 
   from './routers/instituciones-router.js';
 
-import { errorMiddleware } from './middlewares/error-middleware.js';
+import { errorMiddleware } 
+  from './middlewares/error-middleware.js';
+
+import chatRouter 
+  from './routers/chat-router.js';
 
 const app = express();
 
@@ -66,6 +70,11 @@ app.use(
 
 app.use(
   errorMiddleware
+);
+
+app.use(
+  '/api/chat', 
+  chatRouter
 );
 
 export default app;
