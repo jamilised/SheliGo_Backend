@@ -1,12 +1,42 @@
 import ChatRepository from '../repositories/chat-repository.js';
+import UsuariosRepository from '../repositories/usuarios-repository.js';
 import AppError from '../errors/app-error.js';
 
 class ChatService {
     private chatRepo = ChatRepository;
+    private usuariosRepo = UsuariosRepository;
+
+    // Función auxiliar para validar sintaxis de UUID (Lógica pura, se queda en el Service)
+    private esUUIDValido = (uuid: string): boolean => {
+        const regexExp = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        return regexExp.test(uuid);
+    };
+
+    // Obtener la lista de chats/salas de un usuario
+    obtenerMisSalas = async (usuarioId: string, filtro?: string) => {
+        console.log(`⚡ SERVICIO CHAT: Buscando salas para el usuario ${usuarioId} con filtro: ${filtro || 'todas'}`);
+        return await this.chatRepo.getSalasPorUsuario(usuarioId, filtro);
+    };
 
     // Obtener o Crear una sala entre el usuario logueado y otro usuario
     obtenerOCrearSala = async (usuarioLogueadoId: string, otroUsuarioId: string) => {
         console.log(`⚡ SERVICIO CHAT: Buscando o creando sala entre ${usuarioLogueadoId} y ${otroUsuarioId}`);
+
+        // 🚨 VALIDACIÓN 1: Sintaxis de UUID de ambos usuarios
+        if (!this.esUUIDValido(usuarioLogueadoId) || !this.esUUIDValido(otroUsuarioId)) {
+            throw new AppError('El ID de usuario proporcionado no tiene un formato válido.', 400);
+        }
+
+        // 🚨 VALIDACIÓN 2: No se puede crear una sala con uno mismo
+        if (usuarioLogueadoId === otroUsuarioId) {
+            throw new AppError('No podés crear una sala de chat con vos mismo.', 400);
+        }
+
+        // 🚨 VALIDACIÓN 3: Capas respetadas. Usamos el repositorio de usuarios para verificar si existe
+        const otroUsuario = await this.usuariosRepo.getById(otroUsuarioId);
+        if (!otroUsuario) {
+            throw new AppError('El usuario con el que intentás chatear no existe.', 404);
+        }
 
         // 1. Checkear si ya tienen una sala juntos
         const salaExistente = await this.chatRepo.buscarSalaCompartida(usuarioLogueadoId, otroUsuarioId);
@@ -28,11 +58,14 @@ class ChatService {
         return { sala_id: nuevaSala.id };
     };
 
-    // Obtener el historial de mensajes de una sala (Asegurando que el usuario pertenezca a ella)
+    // Obtener el historial de mensajes de una sala
     obtenerMensajesSala = async (salaId: string, usuarioId: string) => {
         console.log(`⚡ SERVICIO CHAT: Cargando mensajes para la sala ${salaId}`);
 
-        // Seguridad: Validamos que el usuario que pide los mensajes realmente sea miembro de la sala
+        if (!this.esUUIDValido(salaId)) {
+            throw new AppError('El ID de la sala no es válido.', 400);
+        }
+
         const esMiembro = await this.chatRepo.esParticipante(salaId, usuarioId);
         if (!esMiembro) {
             throw new AppError('No tenés permisos para ver los mensajes de esta sala.', 403);
@@ -45,11 +78,14 @@ class ChatService {
     guardarMensaje = async (salaId: string, emisorId: string, contenido: string) => {
         console.log(`⚡ SERVICIO CHAT: Guardando nuevo mensaje en sala ${salaId}`);
 
+        if (!this.esUUIDValido(salaId)) {
+            throw new AppError('El ID de la sala no es válido.', 400);
+        }
+
         if (!contenido || contenido.trim() === '') {
             throw new AppError('El contenido del mensaje no puede estar vacío.', 400);
         }
 
-        // Seguridad: Validamos que el emisor realmente pertenezca a la sala
         const esMiembro = await this.chatRepo.esParticipante(salaId, emisorId);
         if (!esMiembro) {
             throw new AppError('No podés enviar mensajes a una sala a la que no pertenecés.', 403);
@@ -58,22 +94,19 @@ class ChatService {
         return await this.chatRepo.enviarMensaje(salaId, emisorId, contenido.trim());
     };
 
-    // Obtener la lista de chats/salas de un usuario con filtros opcionales
-    obtenerMisSalas = async (usuarioId: string, filtro?: string) => {
-        console.log(`⚡ SERVICIO CHAT: Buscando salas para el usuario ${usuarioId} con filtro: ${filtro || 'todas'}`);
-        return await this.chatRepo.getSalasPorUsuario(usuarioId, filtro);
-    };
-
     // Eliminar un mensaje validando que el emisor sea el dueño
     eliminarMensaje = async (mensajeId: string, usuarioId: string) => {
         console.log(`⚡ SERVICIO CHAT: Intentando eliminar mensaje ${mensajeId} por usuario ${usuarioId}`);
+
+        if (!this.esUUIDValido(mensajeId)) {
+            throw new AppError('El ID del mensaje no es válido.', 400);
+        }
 
         const mensaje = await this.chatRepo.getMensajeById(mensajeId);
         if (!mensaje) {
             throw new AppError('El mensaje que intentás eliminar no existe.', 404);
         }
 
-        // Seguridad: Solo el dueño del mensaje puede borrarlo
         if (mensaje.emisor_id !== usuarioId) {
             throw new AppError('No tenés permisos para eliminar este mensaje.', 403);
         }
