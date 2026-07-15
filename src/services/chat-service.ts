@@ -58,7 +58,7 @@ class ChatService {
         return { sala_id: nuevaSala.id };
     };
 
-    // Obtener el historial de mensajes de una sala
+    // Obtener el historial de mensajes de una sala y marcarlos como leídos
     obtenerMensajesSala = async (salaId: string, usuarioId: string) => {
         console.log(`⚡ SERVICIO CHAT: Cargando mensajes para la sala ${salaId}`);
 
@@ -70,6 +70,9 @@ class ChatService {
         if (!esMiembro) {
             throw new AppError('No tenés permisos para ver los mensajes de esta sala.', 403);
         }
+
+        // 🚀 MAGIA: En segundo plano marcamos los mensajes que recibió este usuario como leídos
+        await this.chatRepo.marcarMensajesComoLeidos(salaId, usuarioId);
 
         return await this.chatRepo.getMensajesPorSala(salaId);
     };
