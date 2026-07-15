@@ -54,12 +54,13 @@ class UsuariosRepository {
 
     // Inserta el nuevo usuario y retorna la Entidad Usuario real
     create = async (u: {
+        id?: string;
         nombre: string;
         apellido: string;
         email: string;
         telefono: string | null;
         rol: string;
-        password_hash: string;
+        password_hash: string | null;
     }) => {
         console.log('EJECUTANDO: create en UsuariosRepository para:', u.email);
         
