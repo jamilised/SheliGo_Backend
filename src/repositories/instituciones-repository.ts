@@ -45,6 +45,18 @@ class InstitucionesRepository {
         console.log('RESULTADO QUERY TODAS INSTITUCIONES:', result)
         return result;
     }
+
+    getById = async (id: string) => {
+
+    const sql = `
+        SELECT id
+        FROM instituciones
+        WHERE id = $1
+    `;
+
+    return await this.db.queryOne(sql, [id]);
+
+}
 }
 
 export default new InstitucionesRepository
