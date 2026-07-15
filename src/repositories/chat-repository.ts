@@ -98,6 +98,17 @@ class ChatRepository {
         const sql = `SELECT id, emisor_id, sala_id FROM mensajes WHERE id = $1;`;
         return await this.db.queryOne(sql, [mensajeId]);
     };
+
+    // 10. Marcar como leídos los mensajes de una sala recibidos por el usuario
+    marcarMensajesComoLeidos = async (salaId: string, usuarioId: string) => {
+        const sql = `
+            UPDATE mensajes 
+            SET leido = true, lectura_at = NOW()
+            WHERE sala_id = $1 AND emisor_id != $2 AND leido = false
+            RETURNING id, sala_id;
+        `;
+        return await this.db.queryAll(sql, [salaId, usuarioId]);
+    };
 }
 
 export default new ChatRepository();
