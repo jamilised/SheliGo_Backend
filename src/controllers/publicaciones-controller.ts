@@ -93,13 +93,11 @@ const create = async (
     next: NextFunction
 ) => {
     try {
-
-        const publicacion =
-            await publicacionesService.createPublicacion(
-                req.body,
-                req.files,
-                res.locals.userIdLogged
-            );
+        const publicacion = await publicacionesService.createPublicacion(
+            req.body,
+            req.files,
+            res.locals.userIdLogged
+        );
 
         return res.status(201).json({
             status: "success",
@@ -107,7 +105,6 @@ const create = async (
                 publicacion
             }
         });
-
     } catch (error) {
         next(error);
     }
@@ -119,7 +116,6 @@ const remove = async (
     next: NextFunction
 ) => {
     try {
-
         const id = req.params.id as string;
 
         await publicacionesService.remove(
@@ -131,35 +127,26 @@ const remove = async (
             status: "success",
             message: "Publicación eliminada correctamente"
         });
-
     } catch (error) {
         next(error);
     }
 };
-
 
 const createRespuesta = async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
-
     try {
-
-        const preguntaId =
-            req.params.preguntaId as string;
-
-        const usuarioId =
-            res.locals.userIdLogged;
-
+        const preguntaId = req.params.preguntaId as string;
+        const usuarioId = res.locals.userIdLogged;
         const { contenido } = req.body;
 
-        const respuesta =
-            await preguntasService.createRespuesta(
-                preguntaId,
-                usuarioId,
-                contenido
-            );
+        const respuesta = await preguntasService.createRespuesta(
+            preguntaId,
+            usuarioId,
+            contenido
+        );
 
         return res.status(201).json({
             status: "success",
@@ -168,11 +155,35 @@ const createRespuesta = async (
                 respuesta
             }
         });
-
     } catch (error) {
         next(error);
     }
+};
 
+const update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const id = req.params.id as string;
+        const usuarioId = res.locals.userIdLogged;
+
+        const publicacion = await publicacionesService.updatePublicacion(
+            id,
+            req.body,
+            req.files,
+            usuarioId
+        );
+
+        return res.status(200).json({
+            status: "success",
+            message: "Publicación actualizada correctamente",
+            data: { publicacion }
+        });
+    } catch (error) {
+        next(error);
+    }
 };
 
 const getMisPublicaciones = async (
@@ -180,28 +191,20 @@ const getMisPublicaciones = async (
     res: Response,
     next: NextFunction
 ) => {
-
     try {
-
-        const publicaciones =
-            await publicacionesService.getMisPublicaciones(
-                res.locals.userIdLogged
-            );
+        const publicaciones = await publicacionesService.getMisPublicaciones(
+            res.locals.userIdLogged
+        );
 
         return res.status(200).json({
-
             status: "success",
-
             data: {
                 publicaciones
             }
-
         });
-
     } catch (error) {
         next(error);
     }
-
 };
 
 export default {
@@ -214,6 +217,6 @@ export default {
     createPregunta,
     createRespuesta,
     create,
-    remove
+    remove,
+    update
 };
-

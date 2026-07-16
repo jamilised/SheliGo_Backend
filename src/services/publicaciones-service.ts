@@ -3,8 +3,8 @@ import NotFoundError from '../errors/not-found-error.js'
 import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 import ArchivosRepository from '../repositories/archivos-repository.js';
+import { DateHelper } from '../helpers/date-helper.js';
 import CategoriasRepository from '../repositories/categorias-repository.js';
-import InstitucionesRepository from '../repositories/archivos-repository.js';
 
 class PublicacionesService {
 
@@ -59,16 +59,7 @@ class PublicacionesService {
     }) => {
         console.log('S1: Entrando a searchPublicaciones en el Service');
 
-        if (
-            filtros.fecha_desde &&
-            filtros.fecha_hasta &&
-            new Date(filtros.fecha_desde) > new Date(filtros.fecha_hasta)
-        ) {
-            throw new AppError(
-                'La fecha desde no puede ser posterior a la fecha hasta.',
-                400
-            );
-        }
+        DateHelper.validarRangoFechas(filtros.fecha_desde, filtros.fecha_hasta);
 
 
         // 1. Llamamos al repositorio usando "this.repository"
@@ -176,6 +167,93 @@ class PublicacionesService {
         await this.repository.delete(publicacionId);
 
     }
+
+    updatePublicacion = async (
+        id: string,
+        body: any,
+        files: any,
+        usuarioId: string
+    ) => {
+        // 1. Validar existencia y dueño
+        const publicacionOriginal = await this.repository.getById(id);
+        if (!publicacionOriginal) {
+            throw new NotFoundError('Publicación no encontrada.');
+        }
+
+        if (publicacionOriginal.usuario_id !== usuarioId) {
+            throw new AppError('No tienes permisos para editar esta publicación.', 403);
+        }
+
+        // 2. Actualizar los datos de la publicación en BD
+        const publicacionActualizada = await this.repository.update(id, {
+            nombre: body.nombre !== undefined ? body.nombre.trim() : publicacionOriginal.nombre,
+            descripcion: body.descripcion !== undefined ? body.descripcion?.trim() : publicacionOriginal.descripcion,
+            fecha_evento: body.fecha_evento !== undefined ? body.fecha_evento : publicacionOriginal.fecha_evento,
+            categoria_id: body.categoria_id !== undefined ? body.categoria_id : publicacionOriginal.categoria_id,
+            institucion_id: body.institucion_id !== undefined ? (body.institucion_id || null) : publicacionOriginal.institucion_id,
+            lugar_institucion: body.lugar_institucion !== undefined ? (body.lugar_institucion || null) : publicacionOriginal.lugar_institucion,
+            tipo: body.tipo !== undefined ? body.tipo : publicacionOriginal.tipo,
+            estado: body.estado !== undefined ? body.estado : publicacionOriginal.estado
+        });
+
+        if (!publicacionActualizada) {
+            throw new AppError('No se pudo actualizar la publicación.', 500);
+        }
+
+        // 3. Procesar borrado de imágenes viejas (si el Front envía un array o string de IDs)
+        let fotosEliminar = body.fotosAEliminar;
+        if (fotosEliminar) {
+            // Por si viene como string JSON desde un FormData
+            if (typeof fotosEliminar === 'string') {
+                try { fotosEliminar = JSON.parse(fotosEliminar); } catch { fotosEliminar = [fotosEliminar]; }
+            }
+            
+            for (const fotoId of fotosEliminar) {
+                const archivoBorrado = await this.archivosRepository.deleteById(fotoId);
+                if (archivoBorrado) {
+                    // Próximamente: Borrar del Storage físico usando StorageHelper.delete(archivoBorrado.url)
+                }
+            }
+        }
+
+        // 4. Procesar subida de imágenes nuevas
+        if (files && files.length > 0) {
+            // Obtenemos cuántas fotos ya tiene para continuar con el índice del nombre
+            const archivosExistentes = await this.archivosRepository.getByPublicacionId(id) || [];
+            let indexInicio = archivosExistentes.length;
+
+            for (let i = 0; i < files.length; i++) {
+                const archivo = files[i];
+                const nombreArchivo = `${id}_${Date.now()}_${indexInicio + i}.jpg`; // Timestamp para evitar sobreescribir
+
+                const ruta = await StorageHelper.optimizarYSubir(
+                    archivo.buffer,
+                    'publicaciones',
+                    nombreArchivo
+                );
+
+                if (!ruta) continue;
+
+                await this.archivosRepository.create({
+                    publicacion_id: id,
+                    url: ruta,
+                    mime_type: archivo.mimetype,
+                    es_principal: false // Las subimos como normales inicialmente
+                });
+            }
+        }
+
+        // 5. REGULARIZACIÓN DE FOTO PRINCIPAL: 
+        // Si no quedó ninguna foto marcada como principal, asignamos la primera que encontremos.
+        const todosLosArchivos = await this.archivosRepository.getByPublicacionId(id) || [];
+        const tienePrincipal = todosLosArchivos.some((a: any) => a.es_principal);
+
+        if (!tienePrincipal && todosLosArchivos.length > 0) {
+            await this.archivosRepository.marcarComoPrincipal(todosLosArchivos[0].id);
+        }
+
+        return publicacionActualizada;
+    };
 
     getMisPublicaciones = async (
         usuarioId: string
