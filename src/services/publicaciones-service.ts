@@ -3,6 +3,7 @@ import NotFoundError from '../errors/not-found-error.js'
 import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 import ArchivosRepository from '../repositories/archivos-repository.js';
+import { DateHelper } from '../helpers/date-helper.js';
 import CategoriasRepository from '../repositories/categorias-repository.js';
 import InstitucionesRepository from '../repositories/archivos-repository.js';
 
@@ -59,16 +60,7 @@ class PublicacionesService {
     }) => {
         console.log('S1: Entrando a searchPublicaciones en el Service');
 
-        if (
-            filtros.fecha_desde &&
-            filtros.fecha_hasta &&
-            new Date(filtros.fecha_desde) > new Date(filtros.fecha_hasta)
-        ) {
-            throw new AppError(
-                'La fecha desde no puede ser posterior a la fecha hasta.',
-                400
-            );
-        }
+        DateHelper.validarRangoFechas(filtros.fecha_desde, filtros.fecha_hasta);
 
 
         // 1. Llamamos al repositorio usando "this.repository"
