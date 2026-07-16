@@ -38,6 +38,37 @@ class ArchivosRepository {
             archivo.es_principal
         ]);
     }
+
+    // Eliminar un archivo específico por su ID
+    deleteById = async (id: string) => {
+        const sql = `
+            DELETE FROM archivos
+            WHERE id = $1
+            RETURNING *
+        `;
+        return await this.db.queryOne(sql, [id]);
+    };
+
+    // Desmarcar todas las fotos de una publicación como principales
+    desmarcarPrincipales = async (publicacionId: string) => {
+        const sql = `
+            UPDATE archivos
+            SET es_principal = false
+            WHERE publicacion_id = $1
+            RETURNING id;
+        `;
+        return await this.db.queryAll(sql, [publicacionId]);
+    };
+
+    // Marcar una foto específica como principal
+    marcarComoPrincipal = async (archivoId: string) => {
+        const sql = `
+            UPDATE archivos
+            SET es_principal = true
+            WHERE id = $1
+        `;
+        return await this.db.queryOne(sql, [archivoId]);
+    };
 }
 
 export default new ArchivosRepository(); // 🚀 Instancia directa
