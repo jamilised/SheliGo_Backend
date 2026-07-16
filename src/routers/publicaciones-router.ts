@@ -8,6 +8,7 @@ import upload from "../middlewares/upload-middleware.js";
 const router = Router();
 
 router.get('/recientes', authMiddleware, publicacionesController.getRecientes);
+router.get("/mias", authMiddleware, publicacionesController.getMisPublicaciones);
 router.get('/search', authMiddleware, publicacionesController.search);
 router.get('/:id', authMiddleware, publicacionesController.getDetalle);
 router.get('/:id/archivos', authMiddleware, publicacionesController.getArchivos);

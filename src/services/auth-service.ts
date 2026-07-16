@@ -10,7 +10,9 @@ class AuthService {
     login = async (email: string, password: string) => {
         console.log('⚡ SERVICIO AUTH: Iniciando login para:', email);
 
-        const usuario = await this.usuariosRepo.getByEmail(email);
+        const usuario = await this.usuariosRepo.getByEmail(
+            email.toLowerCase().trim()
+        );
         if (!usuario) {
             throw new AppError('Credenciales inválidas', 401);
         }
@@ -51,7 +53,7 @@ class AuthService {
         }
 
         // --- 2. CIFRADO DE CONTRASEÑA ---
-        const saltRounds = 10;
+        const saltRounds = 12;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
         // --- 3. CREACIÓN DEL REGISTRO ---
