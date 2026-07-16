@@ -16,6 +16,7 @@ router.post('/:id/preguntas', authMiddleware, publicacionesController.createPreg
 router.post("/preguntas/:preguntaId/respuesta", authMiddleware, publicacionesController.createRespuesta);
 
 router.delete("/:id", authMiddleware, publicacionesController.remove);
+router.put("/:id", authMiddleware, upload.array("imagenes", 5), publicacionesController.update);
 
 router.post("/", authMiddleware, upload.array("imagenes",5), validateBody(createPublicacionSchema), publicacionesController.create);
 

@@ -175,6 +175,33 @@ const createRespuesta = async (
 
 };
 
+const update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const id = req.params.id as string;
+        const usuarioId = res.locals.userIdLogged;
+
+        const publicacion = await publicacionesService.updatePublicacion(
+            id,
+            req.body,
+            req.files,
+            usuarioId
+        );
+
+        return res.status(200).json({
+            status: "success",
+            message: "Publicación actualizada correctamente",
+            data: { publicacion }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 export default {
     getRecientes,
     search,
@@ -184,6 +211,7 @@ export default {
     createPregunta,
     createRespuesta,
     create,
-    remove
+    remove,
+    update
 };
 
