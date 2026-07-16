@@ -139,7 +139,9 @@ git clone <URL_DEL_REPOSITORIO>
 
 ```bash
 npm install
+```
 o
+```bash
 instalador.cmd
 ```
 
@@ -251,17 +253,20 @@ Próximas funcionalidades previstas:
 ## Arquitectura
 
 ```mermaid
-flowchart LR
+flowchart TD
 
-Frontend --> Express
+A[Frontend React] --> B[Express API]
 
-Express --> Controllers
-Controllers --> Services
-Services --> Repositories
-Repositories --> PostgreSQL
+B --> C[Routers]
+C --> D[Controllers]
+D --> E[Services]
+E --> F[Repositories]
+F --> G[(PostgreSQL)]
 
-Services --> SupabaseStorage
-Services --> JWT
+E --> H[Supabase Storage]
+E --> I[JWT]
+E --> J[Bcrypt]
+```
 
 # Autores
 
