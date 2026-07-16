@@ -88,59 +88,59 @@ class PublicacionesRepository {
 
     }
 
-search = async (filtros: {
-    busqueda?: string;
-    categoria_id?: string;
-    institucion_id?: string;
-    lugar_institucion?: string;
-    fecha_desde?: string;
-    fecha_hasta?: string;
-    tipo?: string;
-}) => {
-    let sql = `
-        SELECT 
-            p.id, p.nombre, p.descripcion, p.fecha_evento, p.tipo, p.estado, p.lugar_institucion,
-            i.nombre AS institucion_nombre, i.direccion AS institucion_direccion,
-            c.nombre AS categoria_nombre, a.url AS foto_principal_url
-        FROM publicaciones p
-        LEFT JOIN instituciones i ON i.id = p.institucion_id
-        LEFT JOIN categorias c ON c.id = p.categoria_id
-        LEFT JOIN LATERAL (
-            SELECT url FROM archivos WHERE publicacion_id = p.id ORDER BY es_principal DESC LIMIT 1
-        ) a ON true
-        WHERE 1=1
-    `;
+    search = async (filtros: {
+        busqueda?: string;
+        categoria_id?: string;
+        institucion_id?: string;
+        lugar_institucion?: string;
+        fecha_desde?: string;
+        fecha_hasta?: string;
+        tipo?: string;
+    }) => {
+        let sql = `
+            SELECT 
+                p.id, p.nombre, p.descripcion, p.fecha_evento, p.tipo, p.estado, p.lugar_institucion,
+                i.nombre AS institucion_nombre, i.direccion AS institucion_direccion,
+                c.nombre AS categoria_nombre, a.url AS foto_principal_url
+            FROM publicaciones p
+            LEFT JOIN instituciones i ON i.id = p.institucion_id
+            LEFT JOIN categorias c ON c.id = p.categoria_id
+            LEFT JOIN LATERAL (
+                SELECT url FROM archivos WHERE publicacion_id = p.id ORDER BY es_principal DESC LIMIT 1
+            ) a ON true
+            WHERE 1=1
+        `;
 
-    const values: any[] = [];
-    let paramIndex = 1;
+        const values: any[] = [];
+        let paramIndex = 1;
 
-    // 1. Filtro complejo de texto (Full Text Search)
-    if (filtros.busqueda) {
-        const palabrasClave = SqlSearchHelper.prepararPalabrasClaveTsQuery(filtros.busqueda);
-        sql += ` AND (to_tsvector('spanish', p.nombre || ' ' || COALESCE(p.descripcion, '')) @@ to_tsquery('spanish', $${paramIndex}))`;
-        values.push(palabrasClave);
-        paramIndex++;
+        // 1. Filtro complejo de texto (Full Text Search)
+        if (filtros.busqueda) {
+            const palabrasClave = SqlSearchHelper.prepararPalabrasClaveTsQuery(filtros.busqueda);
+            sql += ` AND (to_tsvector('spanish', p.nombre || ' ' || COALESCE(p.descripcion, '')) @@ to_tsquery('spanish', $${paramIndex}))`;
+            values.push(palabrasClave);
+            paramIndex++;
+        }
+
+        // 2. Filtros de igualdad limpios usando el Helper (sirve para Categorías, Instituciones, Tipo, etc.)
+        ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroIgualdad('p.categoria_id', filtros.categoria_id, sql, values, paramIndex));
+        ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroIgualdad('p.institucion_id', filtros.institucion_id, sql, values, paramIndex));
+        ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroIgualdad('p.tipo', filtros.tipo, sql, values, paramIndex));
+
+        // 3. Filtro específico de ILIKE para lugar_institucion
+        if (filtros.lugar_institucion) {
+            sql += ` AND p.lugar_institucion ILIKE $${paramIndex}`;
+            values.push(`%${filtros.lugar_institucion}%`);
+            paramIndex++;
+        }
+
+        // 4. Filtro de Fechas Dinámico usando el Helper
+        ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroRangoFechas('p.fecha_evento', filtros.fecha_desde, filtros.fecha_hasta, sql, values, paramIndex));
+
+        sql += ` ORDER BY p.fecha_evento DESC`;
+
+        return await this.db.queryAll(sql, values);
     }
-
-    // 2. Filtros de igualdad limpios usando el Helper (sirve para Categorías, Instituciones, Tipo, etc.)
-    ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroIgualdad('p.categoria_id', filtros.categoria_id, sql, values, paramIndex));
-    ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroIgualdad('p.institucion_id', filtros.institucion_id, sql, values, paramIndex));
-    ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroIgualdad('p.tipo', filtros.tipo, sql, values, paramIndex));
-
-    // 3. Filtro específico de ILIKE para lugar_institucion
-    if (filtros.lugar_institucion) {
-        sql += ` AND p.lugar_institucion ILIKE $${paramIndex}`;
-        values.push(`%${filtros.lugar_institucion}%`);
-        paramIndex++;
-    }
-
-    // 4. Filtro de Fechas Dinámico usando el Helper
-    ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroRangoFechas('p.fecha_evento', filtros.fecha_desde, filtros.fecha_hasta, sql, values, paramIndex));
-
-    sql += ` ORDER BY p.fecha_evento DESC`;
-
-    return await this.db.queryAll(sql, values);
-}
 
     create = async (p: {
         usuario_id: string;
@@ -188,7 +188,7 @@ search = async (filtros: {
             p.lugar_institucion
         ]);
     }
-    
+
     // Editar una publicación existente
     update = async (id: string, p: {
         categoria_id: string;
@@ -228,6 +228,44 @@ search = async (filtros: {
             id
         ]);
     };
+
+    getByUsuarioId = async (usuarioId: string) => {
+
+        const sql = `
+        SELECT
+            p.id,
+            p.nombre,
+            p.descripcion,
+            p.fecha_evento,
+            p.tipo,
+            p.estado,
+            p.lugar_institucion,
+            c.nombre AS categoria_nombre,
+            i.nombre AS institucion_nombre,
+            i.direccion AS institucion_direccion,
+            a.url AS foto_principal_url,
+            a.mime_type AS foto_principal_mime_type
+        FROM publicaciones p
+        LEFT JOIN categorias c
+            ON c.id = p.categoria_id
+        LEFT JOIN instituciones i
+            ON i.id = p.institucion_id
+        LEFT JOIN LATERAL (
+            SELECT
+                url,
+                mime_type
+            FROM archivos
+            WHERE publicacion_id = p.id
+            ORDER BY es_principal DESC, created_at DESC
+            LIMIT 1
+        ) a ON true
+        WHERE p.usuario_id = $1
+        ORDER BY p.created_at DESC
+    `;
+
+        return await this.db.queryAll(sql, [usuarioId]);
+
+    }
 }
 
-export default new PublicacionesRepository
+export default new PublicacionesRepository()

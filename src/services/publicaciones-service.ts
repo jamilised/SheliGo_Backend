@@ -5,7 +5,6 @@ import { StorageHelper } from '../helpers/storage-helper.js';
 import ArchivosRepository from '../repositories/archivos-repository.js';
 import { DateHelper } from '../helpers/date-helper.js';
 import CategoriasRepository from '../repositories/categorias-repository.js';
-import InstitucionesRepository from '../repositories/archivos-repository.js';
 
 class PublicacionesService {
 
@@ -255,6 +254,33 @@ class PublicacionesService {
 
         return publicacionActualizada;
     };
+
+    getMisPublicaciones = async (
+        usuarioId: string
+    ) => {
+
+        const publicaciones =
+            await this.repository.getByUsuarioId(usuarioId);
+
+        if (!publicaciones) {
+            throw new AppError(
+                "Error al recuperar las publicaciones.",
+                500
+            );
+        }
+
+        return publicaciones.map((pub: any) => {
+
+            pub.foto_principal_url =
+                StorageHelper.buildUrl(
+                    pub.foto_principal_url
+                );
+
+            return pub;
+
+        });
+
+    }
 }
 
 export default new PublicacionesService()
