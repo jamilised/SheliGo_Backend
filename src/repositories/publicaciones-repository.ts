@@ -1,4 +1,6 @@
 import DbPg from '../database/db-pg.js'
+import { SqlSearchHelper } from '../helpers/sql-search-helper.js';
+import { QueryBuilderHelper } from '../helpers/query-builder-helper.js';
 
 class PublicacionesRepository {
 
@@ -86,115 +88,59 @@ class PublicacionesRepository {
 
     }
 
-    search = async (filtros: {
-        busqueda?: string;
-        categoria_id?: string;
-        institucion_id?: string;
-        lugar_institucion?: string;
-        fecha_desde?: string; // 👈 Cambiado
-        fecha_hasta?: string;    // 👈 Cambiado
-        tipo?: string; // perdido o encontrado
-    }) => {
-        console.log('EJECUTANDO: search en PublicacionesRepository con filtros:', filtros);
-
-        // 1. La base de la query con los mismos JOINs que usás en getRecent
-        let sql = `
+search = async (filtros: {
+    busqueda?: string;
+    categoria_id?: string;
+    institucion_id?: string;
+    lugar_institucion?: string;
+    fecha_desde?: string;
+    fecha_hasta?: string;
+    tipo?: string;
+}) => {
+    let sql = `
         SELECT 
-            p.id, 
-            p.nombre, 
-            p.descripcion, 
-            p.fecha_evento,
-            p.tipo, 
-            p.estado,
-            p.lugar_institucion,
-            i.nombre AS institucion_nombre,
-            i.direccion AS institucion_direccion,
-            c.nombre AS categoria_nombre,
-            a.url AS foto_principal_url,
-            a.mime_type AS foto_principal_mime_type
+            p.id, p.nombre, p.descripcion, p.fecha_evento, p.tipo, p.estado, p.lugar_institucion,
+            i.nombre AS institucion_nombre, i.direccion AS institucion_direccion,
+            c.nombre AS categoria_nombre, a.url AS foto_principal_url
         FROM publicaciones p
         LEFT JOIN instituciones i ON i.id = p.institucion_id
         LEFT JOIN categorias c ON c.id = p.categoria_id
         LEFT JOIN LATERAL (
-            SELECT url, mime_type
-            FROM archivos
-            WHERE publicacion_id = p.id
-            ORDER BY es_principal DESC, created_at DESC
-            LIMIT 1
+            SELECT url FROM archivos WHERE publicacion_id = p.id ORDER BY es_principal DESC LIMIT 1
         ) a ON true
         WHERE 1=1
     `;
 
-        const values: any[] = [];
-        let paramIndex = 1;
+    const values: any[] = [];
+    let paramIndex = 1;
 
-        // 2. Agregamos los filtros dinámicamente si vienen informados
-        if (filtros.busqueda) {
-            const palabrasClave = filtros.busqueda
-                .trim()
-                .split(/\s+/)
-                .map(palabra => `${palabra}:*`)
-                .join(' & ');
-
-            sql += ` AND (
-            to_tsvector('spanish', p.nombre || ' ' || COALESCE(p.descripcion, '')) 
-            @@ to_tsquery('spanish', $${paramIndex})
-        )`;
-
-            values.push(palabrasClave);
-            paramIndex++;
-        }
-
-        if (filtros.categoria_id) {
-            sql += ` AND p.categoria_id = $${paramIndex}`;
-            values.push(filtros.categoria_id);
-            paramIndex++;
-        }
-
-
-        if (filtros.institucion_id) {
-            sql += ` AND p.institucion_id = $${paramIndex}`;
-            values.push(filtros.institucion_id);
-            paramIndex++;
-        }
-
-        if (filtros.lugar_institucion) {
-            sql += ` AND p.lugar_institucion ILIKE $${paramIndex}`;
-            values.push(`%${filtros.lugar_institucion}%`);
-            paramIndex++;
-        }
-
-        if (filtros.tipo) {
-            sql += ` AND p.tipo = $${paramIndex}`;
-            values.push(filtros.tipo);
-            paramIndex++;
-        }
-
-        // 🔥 NUEVO RANGO DE FECHAS DINÁMICO
-        // Si viene fecha_inicio: la fecha_evento debe ser mayor o igual (>=)
-        if (filtros.fecha_desde) {
-            sql += ` AND p.fecha_evento::date >= $${paramIndex}::date`;
-            values.push(filtros.fecha_desde);
-            paramIndex++;
-        }
-
-        // Si viene fecha_fin: la fecha_evento debe ser menor o igual (<=)
-        if (filtros.fecha_hasta) {
-            sql += ` AND p.fecha_evento::date <= $${paramIndex}::date`;
-            values.push(filtros.fecha_hasta);
-            paramIndex++;
-        }
-
-        // 3. Ordenamos por las más nuevas del evento
-        sql += ` ORDER BY p.fecha_evento DESC`;
-
-        console.log(sql);
-        console.log(values);
-
-        // 4. Ejecutamos usando tu helper db
-        const result = await this.db.queryAll(sql, values);
-        return result;
+    // 1. Filtro complejo de texto (Full Text Search)
+    if (filtros.busqueda) {
+        const palabrasClave = SqlSearchHelper.prepararPalabrasClaveTsQuery(filtros.busqueda);
+        sql += ` AND (to_tsvector('spanish', p.nombre || ' ' || COALESCE(p.descripcion, '')) @@ to_tsquery('spanish', $${paramIndex}))`;
+        values.push(palabrasClave);
+        paramIndex++;
     }
+
+    // 2. Filtros de igualdad limpios usando el Helper (sirve para Categorías, Instituciones, Tipo, etc.)
+    ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroIgualdad('p.categoria_id', filtros.categoria_id, sql, values, paramIndex));
+    ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroIgualdad('p.institucion_id', filtros.institucion_id, sql, values, paramIndex));
+    ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroIgualdad('p.tipo', filtros.tipo, sql, values, paramIndex));
+
+    // 3. Filtro específico de ILIKE para lugar_institucion
+    if (filtros.lugar_institucion) {
+        sql += ` AND p.lugar_institucion ILIKE $${paramIndex}`;
+        values.push(`%${filtros.lugar_institucion}%`);
+        paramIndex++;
+    }
+
+    // 4. Filtro de Fechas Dinámico usando el Helper
+    ({ sql, paramIndex } = QueryBuilderHelper.agregarFiltroRangoFechas('p.fecha_evento', filtros.fecha_desde, filtros.fecha_hasta, sql, values, paramIndex));
+
+    sql += ` ORDER BY p.fecha_evento DESC`;
+
+    return await this.db.queryAll(sql, values);
+}
 
     create = async (p: {
         usuario_id: string;
