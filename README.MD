@@ -139,6 +139,8 @@ git clone <URL_DEL_REPOSITORIO>
 
 ```bash
 npm install
+o
+instalador.cmd
 ```
 
 ## Crear el archivo `.env`
