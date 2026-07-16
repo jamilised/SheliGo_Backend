@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 import publicacionesRouter
   from "./routers/publicaciones-router.js";
@@ -25,6 +27,7 @@ import { errorMiddleware }
 
 const app = express();
 
+app.use(helmet());
 /*
 Permite que el frontend
 (Vite React)
@@ -32,14 +35,20 @@ pueda consumir el backend.
 */
 
 app.use(
-
-  cors({
-
-    origin:
-      "http://localhost:5173",
-
-  })
-
+    cors({
+        origin: [
+            "http://localhost:5173", // React Web
+            "http://localhost:8081"  // Expo
+        ],
+        methods: [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+        ],
+        credentials: true
+    })
 );
 
 app.use(express.json());
@@ -78,4 +87,4 @@ app.use(
   errorMiddleware
 );
 
-export default app;
+export default app; 
