@@ -176,6 +176,33 @@ class PublicacionesService {
         await this.repository.delete(publicacionId);
 
     }
+
+    getMisPublicaciones = async (
+        usuarioId: string
+    ) => {
+
+        const publicaciones =
+            await this.repository.getByUsuarioId(usuarioId);
+
+        if (!publicaciones) {
+            throw new AppError(
+                "Error al recuperar las publicaciones.",
+                500
+            );
+        }
+
+        return publicaciones.map((pub: any) => {
+
+            pub.foto_principal_url =
+                StorageHelper.buildUrl(
+                    pub.foto_principal_url
+                );
+
+            return pub;
+
+        });
+
+    }
 }
 
 export default new PublicacionesService()

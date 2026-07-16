@@ -175,8 +175,38 @@ const createRespuesta = async (
 
 };
 
+const getMisPublicaciones = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+
+    try {
+
+        const publicaciones =
+            await publicacionesService.getMisPublicaciones(
+                res.locals.userIdLogged
+            );
+
+        return res.status(200).json({
+
+            status: "success",
+
+            data: {
+                publicaciones
+            }
+
+        });
+
+    } catch (error) {
+        next(error);
+    }
+
+};
+
 export default {
     getRecientes,
+    getMisPublicaciones,
     search,
     getDetalle,
     getArchivos,
