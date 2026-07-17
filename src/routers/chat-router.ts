@@ -7,7 +7,7 @@ const router = Router();
 // Todas las rutas de chat necesitan autenticación previa 🔒
 router.use(authMiddleware);
 
-// 1. GET /api/chat/salas -> Obtener mis salas activas
+// 1. GET /api/chat/salas -> // Soporta: /salas, /salas?filtro=no_leidas, /salas?busqueda=Juan, o combinados!
 router.get('/salas', chatController.getMisSalas);
 
 // 2. POST /api/chat/salas -> Abrir o crear una sala con otro usuario
@@ -21,8 +21,5 @@ router.post('/mensaje', chatController.enviarMensaje);
 
 // 5. DELETE /api/chat/mensaje/:id -> Eliminar un mensaje específico
 router.delete('/mensaje/:id', chatController.eliminarMensaje);
-
-// 6. GET 
-router.get('/search', chatController.searchActiveChats);
 
 export default router;

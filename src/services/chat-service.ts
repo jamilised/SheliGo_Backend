@@ -12,10 +12,10 @@ class ChatService {
         return regexExp.test(uuid);
     };
 
-    // Obtener la lista de chats/salas de un usuario
-    obtenerMisSalas = async (usuarioId: string, filtro?: string) => {
-        console.log(`⚡ SERVICIO CHAT: Buscando salas para el usuario ${usuarioId} con filtro: ${filtro || 'todas'}`);
-        return await this.chatRepo.getSalasPorUsuario(usuarioId, filtro);
+    // Obtener la lista de chats/salas de un usuario (con filtros y/o búsqueda)
+    obtenerMisSalas = async (usuarioId: string, filtro?: string, busqueda?: string) => {
+        console.log(`⚡ SERVICIO CHAT: Buscando salas para ${usuarioId}. Filtro: ${filtro || 'ninguno'}, Busqueda: ${busqueda || 'ninguna'}`);
+        return await this.chatRepo.getSalasPorUsuario(usuarioId, filtro, busqueda);
     };
 
     // Obtener o Crear una sala entre el usuario logueado y otro usuario
@@ -115,22 +115,6 @@ class ChatService {
         }
 
         return await this.chatRepo.eliminarMensaje(mensajeId);
-    };
-
-    searchActiveChats = async (usuarioId: string, busqueda?: string) => {
-        console.log('S1: Entrando a searchActiveChats en el Service');
-
-        // Llamamos al repositorio pasándole quién busca y qué busca
-        const chats = await this.chatRepo.searchActiveChats(usuarioId, busqueda);
-
-        if (chats === null) {
-            throw new AppError('Error al realizar la búsqueda de chats', 500);
-        }
-
-        // Si las salas de chat devuelven fotos de perfil o de la publicación, 
-        // podrías usar tu StorageHelper acá para formatear las URLs, igual que en publicaciones.
-
-        return chats;
     };
 }
 
