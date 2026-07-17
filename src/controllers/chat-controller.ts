@@ -113,10 +113,29 @@ const eliminarMensaje = async (req: Request, res: Response, next: NextFunction) 
     }
 };
 
+const searchActiveChats = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        console.log('⚡ CONTROLLER CHAT: Iniciando búsqueda de salas activas');
+        
+        const usuarioId = res.locals.userIdLogged;
+        const { busqueda } = req.query; // Término de búsqueda libre (ej: "Juan" o "Ovejero")
+
+        const chats = await ChatService.searchActiveChats(usuarioId, busqueda as string);
+        
+        return res.status(200).json({
+            status: 'success',
+            data: { chats }
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 export default {
     getMisSalas,
     abrirOCrearChat,
     getMensajesSala,
     enviarMensaje,
-    eliminarMensaje
+    eliminarMensaje,
+    searchActiveChats
 };

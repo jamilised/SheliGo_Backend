@@ -1,4 +1,5 @@
 import DbPg from '../database/db-pg.js';
+import { SqlSearchHelper } from '../helpers/sql-search-helper.js';
 
 class ChatRepository {
     db = new DbPg();
@@ -109,6 +110,69 @@ class ChatRepository {
         `;
         return await this.db.queryAll(sql, [salaId, usuarioId]);
     };
+
+    searchActiveChats = async (usuarioId: string, busqueda?: string) => {
+        console.log('EJECUTANDO: searchActiveChats con tablas reales. Usuario:', usuarioId, 'Busqueda:', busqueda);
+
+        // 1. Query con CTE (WITH) para armar las salas activas y buscar el último mensaje de cada una
+        let sql = `
+        WITH participantes_salas AS (
+            -- Obtenemos los IDs de las personas que hablan en cada sala
+            SELECT DISTINCT sala_id, emisor_id AS participante_id
+            FROM mensajes
+        ),
+        salas_del_usuario AS (
+            -- Filtramos solo las salas donde participa el usuario logueado
+            SELECT DISTINCT sala_id 
+            FROM participantes_salas 
+            WHERE participante_id = $1
+        ),
+        ultimos_mensajes AS (
+            -- Obtenemos el último mensaje de cada sala para mostrar el "contenido" en la lista
+            SELECT DISTINCT ON (sala_id) id, sala_id, emisor_id, contenido, created_at, leido
+            FROM mensajes
+            ORDER BY sala_id, created_at DESC
+        )
+        SELECT 
+            s.id AS sala_id,
+            m.contenido AS ultimo_mensaje,
+            m.created_at AS ultimo_mensaje_at,
+            m.leido AS ultimo_mensaje_leido,
+            m.emisor_id AS ultimo_mensaje_emisor_id,
+            u_otro.id AS otro_usuario_id,
+            u_otro.nombre AS otro_usuario_nombre,
+            u_otro.apellido AS otro_usuario_apellido
+        FROM salas_del_usuario su
+        JOIN salas_chat s ON s.id = su.sala_id
+        JOIN ultimos_mensajes m ON m.sala_id = s.id
+        -- Buscamos al OTRO participante de la sala (el que no es el usuario logueado)
+        JOIN participantes_salas p_otro ON p_otro.sala_id = s.id AND p_otro.participante_id <> $1
+        JOIN usuarios u_otro ON u_otro.id = p_otro.participante_id
+        WHERE 1=1
+    `;
+
+        const values: any[] = [usuarioId]; // $1 siempre es el usuario logueado
+        let paramIndex = 2;
+
+        // 2. ¡Aplicamos tu Helper de Búsqueda de Texto en el nombre/apellido del otro usuario!
+        if (busqueda) {
+            const palabrasClave = SqlSearchHelper.prepararPalabrasClaveTsQuery(busqueda);
+
+            sql += ` AND (
+            to_tsvector('spanish', u_otro.nombre || ' ' || u_otro.apellido) 
+            @@ to_tsquery('spanish', $${paramIndex})
+        )`;
+
+            values.push(palabrasClave);
+            paramIndex++;
+        }
+
+        // 3. Ordenamos para que las salas con mensajes más recientes aparezcan primero arriba
+        sql += ` ORDER BY m.created_at DESC`;
+
+        return await this.db.queryAll(sql, values);
+    };
+
 }
 
 export default new ChatRepository();

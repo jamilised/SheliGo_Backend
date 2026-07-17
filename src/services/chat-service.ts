@@ -116,6 +116,22 @@ class ChatService {
 
         return await this.chatRepo.eliminarMensaje(mensajeId);
     };
+
+    searchActiveChats = async (usuarioId: string, busqueda?: string) => {
+        console.log('S1: Entrando a searchActiveChats en el Service');
+
+        // Llamamos al repositorio pasándole quién busca y qué busca
+        const chats = await this.chatRepo.searchActiveChats(usuarioId, busqueda);
+
+        if (chats === null) {
+            throw new AppError('Error al realizar la búsqueda de chats', 500);
+        }
+
+        // Si las salas de chat devuelven fotos de perfil o de la publicación, 
+        // podrías usar tu StorageHelper acá para formatear las URLs, igual que en publicaciones.
+
+        return chats;
+    };
 }
 
 export default new ChatService();

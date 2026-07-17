@@ -22,4 +22,7 @@ router.post('/mensaje', chatController.enviarMensaje);
 // 5. DELETE /api/chat/mensaje/:id -> Eliminar un mensaje específico
 router.delete('/mensaje/:id', chatController.eliminarMensaje);
 
+// 6. GET 
+router.get('/search', chatController.searchActiveChats);
+
 export default router;
