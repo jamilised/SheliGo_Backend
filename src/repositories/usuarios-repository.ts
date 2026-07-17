@@ -97,6 +97,60 @@ class UsuariosRepository {
         const sql = `UPDATE usuarios SET foto = $1, updated_at = NOW() WHERE id = $2 RETURNING foto`;
         return await this.db.queryOne(sql, [fotoPath, id]);
     }
+
+    updatePerfil = async (
+        id: string,
+        nombre: string,
+        apellido: string,
+        foto: string
+    ) => {
+
+        console.log(`EJECUTANDO: updatePerfil para ${id}`);
+
+        const sql = `
+            UPDATE usuarios
+            SET
+                nombre = $1,
+                apellido = $2,
+                foto = $3,
+                updated_at = NOW()
+            WHERE id = $4
+            RETURNING
+                id,
+                nombre,
+                apellido,
+                email,
+                telefono,
+                created_at,
+                updated_at,
+                rol,
+                foto
+        `;
+
+        const res = await this.db.queryOne(sql, [
+            nombre,
+            apellido,
+            foto,
+            id
+        ]);
+
+        if (!res) {
+            return null;
+        }
+
+        return new Usuario(
+            res.id,
+            res.nombre,
+            res.apellido,
+            res.email,
+            res.telefono,
+            res.created_at,
+            res.updated_at,
+            res.rol,
+            res.foto
+        );
+
+    };
 }
 
 
