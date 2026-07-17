@@ -12,10 +12,10 @@ class ChatService {
         return regexExp.test(uuid);
     };
 
-    // Obtener la lista de chats/salas de un usuario
-    obtenerMisSalas = async (usuarioId: string, filtro?: string) => {
-        console.log(`⚡ SERVICIO CHAT: Buscando salas para el usuario ${usuarioId} con filtro: ${filtro || 'todas'}`);
-        return await this.chatRepo.getSalasPorUsuario(usuarioId, filtro);
+    // Obtener la lista de chats/salas de un usuario (con filtros y/o búsqueda)
+    obtenerMisSalas = async (usuarioId: string, filtro?: string, busqueda?: string) => {
+        console.log(`⚡ SERVICIO CHAT: Buscando salas para ${usuarioId}. Filtro: ${filtro || 'ninguno'}, Busqueda: ${busqueda || 'ninguna'}`);
+        return await this.chatRepo.getSalasPorUsuario(usuarioId, filtro, busqueda);
     };
 
     // Obtener o Crear una sala entre el usuario logueado y otro usuario

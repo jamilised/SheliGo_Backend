@@ -185,13 +185,16 @@ class PublicacionesService {
         }
 
         // 2. Actualizar los datos de la publicación en BD
+        // En tu publicaciones-service.ts -> updatePublicacion
+        // Alivianamos el mapeo de datos ya que Zod los purificó antes de entrar
+
         const publicacionActualizada = await this.repository.update(id, {
-            nombre: body.nombre !== undefined ? body.nombre.trim() : publicacionOriginal.nombre,
-            descripcion: body.descripcion !== undefined ? body.descripcion?.trim() : publicacionOriginal.descripcion,
+            nombre: body.nombre !== undefined ? body.nombre : publicacionOriginal.nombre,
+            descripcion: body.descripcion !== undefined ? body.descripcion : publicacionOriginal.descripcion,
             fecha_evento: body.fecha_evento !== undefined ? body.fecha_evento : publicacionOriginal.fecha_evento,
             categoria_id: body.categoria_id !== undefined ? body.categoria_id : publicacionOriginal.categoria_id,
-            institucion_id: body.institucion_id !== undefined ? (body.institucion_id || null) : publicacionOriginal.institucion_id,
-            lugar_institucion: body.lugar_institucion !== undefined ? (body.lugar_institucion || null) : publicacionOriginal.lugar_institucion,
+            institucion_id: body.institucion_id !== undefined ? body.institucion_id : publicacionOriginal.institucion_id,
+            lugar_institucion: body.lugar_institucion !== undefined ? body.lugar_institucion : publicacionOriginal.lugar_institucion,
             tipo: body.tipo !== undefined ? body.tipo : publicacionOriginal.tipo,
             estado: body.estado !== undefined ? body.estado : publicacionOriginal.estado
         });
@@ -207,7 +210,7 @@ class PublicacionesService {
             if (typeof fotosEliminar === 'string') {
                 try { fotosEliminar = JSON.parse(fotosEliminar); } catch { fotosEliminar = [fotosEliminar]; }
             }
-            
+
             for (const fotoId of fotosEliminar) {
                 const archivoBorrado = await this.archivosRepository.deleteById(fotoId);
                 if (archivoBorrado) {

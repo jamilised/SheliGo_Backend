@@ -1,4 +1,5 @@
 import DbPg from '../database/db-pg.js';
+import { SqlSearchHelper } from '../helpers/sql-search-helper.js';
 
 class ChatRepository {
     db = new DbPg();
@@ -55,8 +56,8 @@ class ChatRepository {
         return !!res;
     };
 
-    // 4. Trae las salas del usuario con soporte para filtrar leídos / no leídos
-    getSalasPorUsuario = async (usuarioId: string, filtro?: string) => {
+// 4. Trae las salas del usuario con soporte para filtros de lectura Y búsqueda por nombre/apellido
+    getSalasPorUsuario = async (usuarioId: string, filtro?: string, busqueda?: string) => {
         let sql = `
             SELECT 
                 s.id AS sala_id,
@@ -75,17 +76,35 @@ class ChatRepository {
             WHERE p1.usuario_id = $1
         `;
 
-        // Aplicamos el filtro si viene
+        const values: any[] = [usuarioId];
+        let paramIndex = 2;
+
+        // Cláusula para filtros de lectura
         if (filtro === 'leidas') {
             sql += ` AND (SELECT COUNT(*) FROM mensajes m WHERE m.sala_id = s.id AND m.emisor_id != $1 AND m.leido = false) = 0`;
         } else if (filtro === 'no_leidas') {
             sql += ` AND (SELECT COUNT(*) FROM mensajes m WHERE m.sala_id = s.id AND m.emisor_id != $1 AND m.leido = false) > 0`;
         }
 
+        // 🔥 Agregamos de forma dinámica tu Helper de búsqueda si viene el parámetro
+        if (busqueda) {
+            const palabrasClave = SqlSearchHelper.prepararPalabrasClaveTsQuery(busqueda);
+            
+            sql += ` AND (
+                to_tsvector('spanish', u.nombre || ' ' || u.apellido) 
+                @@ to_tsquery('spanish', $${paramIndex})
+            )`;
+            
+            values.push(palabrasClave);
+            paramIndex++;
+        }
+
         sql += ` ORDER BY ultimo_mensaje_fecha DESC NULLS LAST;`;
 
-        return await this.db.queryAll(sql, [usuarioId]);
+        return await this.db.queryAll(sql, values);
     };
+    
+    // ❌ Podés BORRAR por completo el método searchActiveChats de este archivo
 
     // 8. Elimina un mensaje físico de la DB
     eliminarMensaje = async (mensajeId: string) => {
@@ -109,6 +128,7 @@ class ChatRepository {
         `;
         return await this.db.queryAll(sql, [salaId, usuarioId]);
     };
+
 }
 
 export default new ChatRepository();
