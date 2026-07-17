@@ -203,21 +203,40 @@ class PublicacionesService {
             throw new AppError('No se pudo actualizar la publicación.', 500);
         }
 
-        // 3. Procesar borrado de imágenes viejas (si el Front envía un array o string de IDs)
-        let fotosEliminar = body.fotosAEliminar;
-        if (fotosEliminar) {
-            // Por si viene como string JSON desde un FormData
-            if (typeof fotosEliminar === 'string') {
-                try { fotosEliminar = JSON.parse(fotosEliminar); } catch { fotosEliminar = [fotosEliminar]; }
-            }
+       // ... tu código anterior del Service (pasos 1 y 2) ...
 
-            for (const fotoId of fotosEliminar) {
-                const archivoBorrado = await this.archivosRepository.deleteById(fotoId);
-                if (archivoBorrado) {
-                    // Próximamente: Borrar del Storage físico usando StorageHelper.delete(archivoBorrado.url)
-                }
+    let fotosEliminar = body.fotosAEliminar;
+    
+    // 👇 AGREGÁ ESTE LOG DE CONTROL ACÁ ARRIBA
+    console.log("🔍 ¿Qué está llegando exactamente en body.fotosAEliminar?:", fotosEliminar, "Tipo de dato:", typeof fotosEliminar);
+
+    if (fotosEliminar) {
+        if (typeof fotosEliminar === 'string') {
+            try { 
+                fotosEliminar = JSON.parse(fotosEliminar); 
+                console.log("✅ Parseado con éxito a Array:", fotosEliminar);
+            } catch { 
+                // Si falla el parseo (porque es un string común con el ID suelto), lo metemos en un array
+                fotosEliminar = [fotosEliminar]; 
+                console.log("⚠️ Falló JSON.parse, se convirtió a array manual:", fotosEliminar);
             }
         }
+        
+        // Si ya es un array por naturaleza o vino purificado:
+        // Asegurémonos de que si es un array vacío por error del Front (ej: '[]' o ""), no intente recorrerlo
+        if (Array.isArray(fotosEliminar) && fotosEliminar.length > 0) {
+            for (const fotoId of fotosEliminar) {
+                // ... (tus console.log de intento de borrado que pusimos antes)
+                console.log(`🤖 Intentando borrar la foto con ID: ${fotoId}`);
+                const archivoBorrado = await this.archivosRepository.deleteById(fotoId);
+                console.log(`📸 Resultado del repositorio al borrar:`, archivoBorrado);
+            }
+        } else {
+            console.log("❌ fotosEliminar es un array pero está vacío o no es válido");
+        }
+    } else {
+        console.log("❌ body.fotosAEliminar vino como UNDEFINED o NULL, por eso no borra nada");
+    }
 
         // 4. Procesar subida de imágenes nuevas
         if (files && files.length > 0) {
