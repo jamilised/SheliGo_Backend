@@ -26,7 +26,8 @@ export const searchPublicacionSchema = z.object({
     tipo: z.enum(['perdido', 'encontrado'], { message: 'El tipo debe ser perdido o encontrado' }).optional(),
 });
 
-const limpiarTexto = (texto?: string) => {
+// Cambiá la función para que acepte también el tipo null 
+const limpiarTexto = (texto?: string | null) => {
     if (!texto) return null;
 
     const limpio = texto.trim().replace(/\s+/g, " ");
@@ -74,4 +75,23 @@ export const createPublicacionSchema = z.object({
         .max(100)
         .optional()
         .transform(limpiarTexto)
+});
+
+// Al final de tu archivo de esquemas de publicación...
+
+export const updatePublicacionSchema = createPublicacionSchema.partial().extend({
+    // Si mandan el nombre para editar, tiene que cumplir sí o sí con las reglas de creación
+    // Pero si mandan "" (un string vacío), .min(3) lo va a rebotar con este error:
+    nombre: z.string()
+        .trim()
+        .min(3, "El nombre editado debe tener al menos 3 caracteres")
+        .max(100, "El nombre no puede superar los 100 caracteres")
+        .transform(valor => valor.replace(/\s+/g, " "))
+        .optional(),
+
+    // Permitimos explícitamente que la institución e institución_id puedan ser nulas 
+    // por si el usuario quiere desvincular la publicación de una institución
+    institucion_id: z.string().uuid("La institución es inválida").nullable().optional(),
+    lugar_institucion: z.string().max(100).nullable().optional().transform(limpiarTexto),
+    descripcion: z.string().max(1000, "La descripción no puede superar los 1000 caracteres").nullable().optional().transform(limpiarTexto),
 });
