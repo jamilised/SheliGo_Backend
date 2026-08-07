@@ -63,7 +63,7 @@ class UsuariosRepository {
         password_hash: string | null;
     }) => {
         console.log('EJECUTANDO: create en UsuariosRepository para:', u.email);
-        
+
         const sql = `
             INSERT INTO usuarios (nombre, apellido, email, telefono, rol, password_hash, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
@@ -72,7 +72,7 @@ class UsuariosRepository {
 
         const values = [u.nombre, u.apellido, u.email, u.telefono, u.rol, u.password_hash];
         const res = await this.db.queryOne(sql, values);
-        
+
         console.log('USUARIO INSERTADO EN DB CON ID:', res?.id);
 
         if (!res) return null;
@@ -96,6 +96,27 @@ class UsuariosRepository {
         console.log(`➡️ EJECUTANDO: updateFoto para ID ${id} con ruta: ${fotoPath}`);
         const sql = `UPDATE usuarios SET foto = $1, updated_at = NOW() WHERE id = $2 RETURNING foto`;
         return await this.db.queryOne(sql, [fotoPath, id]);
+    }
+
+    // Método para obtener el usuario incluyendo la contraseña hasheada
+    async findById(id: string) {
+        const sql = `
+    SELECT id, email, password
+    FROM usuarios
+    WHERE id = $1
+  `;
+        return await this.db.queryOne(sql, [id]);
+    }
+
+    // Método para actualizar únicamente la contraseña
+    async updatePassword(id: string, newPasswordHash: string) {
+        const sql = `
+    UPDATE usuarios
+    SET password = $1, updated_at = NOW()
+    WHERE id = $2
+    RETURNING id
+  `;
+        return await this.db.queryOne(sql, [newPasswordHash, id]);
     }
 }
 

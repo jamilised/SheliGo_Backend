@@ -19,7 +19,32 @@ const getMe = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
+const cambiarContrasena = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const usuarioId = res.locals.userIdLogged; // ID extraído del token JWT en authMiddleware
+    const { contrasenaActual, nuevaContrasena } = req.body;
+
+    await usuariosService.cambiarContrasena(
+      usuarioId,
+      contrasenaActual,
+      nuevaContrasena
+    );
+
+    return res.status(200).json({
+      status: "success",
+      message: "Contraseña actualizada correctamente"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Cumple regla: Objeto con funciones flecha para Controllers
 export default {
-    getMe
+    getMe,
+    cambiarContrasena
 };
