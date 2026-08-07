@@ -1,7 +1,7 @@
 import UsuariosRepository from '../repositories/usuarios-repository.js';
 import AppError from '../errors/app-error.js'
 import { StorageHelper } from '../helpers/storage-helper.js';
-
+import path from "path";
 
 class UsuariosService {
     private usuariosRepo = UsuariosRepository;
@@ -57,10 +57,20 @@ class UsuariosService {
 
             const archivo = files[0];
 
-            // Validamos que el archivo sea una imagen
-            if (!archivo.mimetype.startsWith("image/")) {
+            const extensionesPermitidas = [
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".jfif"
+            ];
+
+            const extension = path
+                .extname(archivo.originalname)
+                .toLowerCase();
+
+            if (!extensionesPermitidas.includes(extension)) {
                 throw new AppError(
-                    "El archivo debe ser una imagen.",
+                    "Formato de imagen no permitido. Solo se permiten JPG, JPEG, PNG y JFIF.",
                     400
                 );
             }
