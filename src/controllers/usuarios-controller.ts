@@ -19,13 +19,11 @@ const getMe = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-const cambiarContrasena = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+const cambiarContrasena = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const usuarioId = res.locals.userIdLogged; // ID extraído del token JWT en authMiddleware
+    const usuarioId = res.locals.userIdLogged || res.locals.userId; // 👈 Proba ambas por si tu middleware usa userId
+    console.log("🔍 BUSCANDO USUARIO CON ID:", usuarioId);
+
     const { contrasenaActual, nuevaContrasena } = req.body;
 
     await usuariosService.cambiarContrasena(

@@ -98,26 +98,25 @@ class UsuariosRepository {
         return await this.db.queryOne(sql, [fotoPath, id]);
     }
 
-    // Método para obtener el usuario incluyendo la contraseña hasheada
-    async findById(id: string) {
-        const sql = `
-    SELECT id, email, password
+   // En tu usuarios-repository.ts
+async findById(id: string) {
+  const sql = `
+    SELECT id, email, nombre, password_hash
     FROM usuarios
     WHERE id = $1
   `;
-        return await this.db.queryOne(sql, [id]);
-    }
+  return await this.db.queryOne(sql, [id]);
+}
 
-    // Método para actualizar únicamente la contraseña
-    async updatePassword(id: string, newPasswordHash: string) {
-        const sql = `
+async updatePassword(id: string, newPasswordHash: string) {
+  const sql = `
     UPDATE usuarios
-    SET password = $1, updated_at = NOW()
+    SET password_hash = $1, updated_at = NOW()
     WHERE id = $2
     RETURNING id
   `;
-        return await this.db.queryOne(sql, [newPasswordHash, id]);
-    }
+  return await this.db.queryOne(sql, [newPasswordHash, id]);
+}
 }
 
 
