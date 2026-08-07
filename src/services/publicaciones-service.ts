@@ -168,114 +168,101 @@ class PublicacionesService {
 
     }
 
-    updatePublicacion = async (
-        id: string,
-        body: any,
-        files: any,
-        usuarioId: string
-    ) => {
-        // 1. Validar existencia y dueño
-        const publicacionOriginal = await this.repository.getById(id);
-        if (!publicacionOriginal) {
-            throw new NotFoundError('Publicación no encontrada.');
-        }
+updatePublicacion = async (
+    id: string,
+    body: any,
+    files: any,
+    usuarioId: string
+) => {
+    // 1. Validar existencia y dueño
+    const publicacionOriginal = await this.repository.getById(id);
+    if (!publicacionOriginal) {
+        throw new NotFoundError('Publicación no encontrada.');
+    }
 
-        if (publicacionOriginal.usuario_id !== usuarioId) {
-            throw new AppError('No tienes permisos para editar esta publicación.', 403);
-        }
+    if (publicacionOriginal.usuario_id !== usuarioId) {
+        throw new AppError('No tienes permisos para editar esta publicación.', 403);
+    }
 
-        // 2. Actualizar los datos de la publicación en BD
-        // En tu publicaciones-service.ts -> updatePublicacion
-        // Alivianamos el mapeo de datos ya que Zod los purificó antes de entrar
+    // 2. Actualizar los datos de la publicación en BD
+    const publicacionActualizada = await this.repository.update(id, {
+        nombre: body.nombre !== undefined ? body.nombre : publicacionOriginal.nombre,
+        descripcion: body.descripcion !== undefined ? body.descripcion : publicacionOriginal.descripcion,
+        fecha_evento: body.fecha_evento !== undefined ? body.fecha_evento : publicacionOriginal.fecha_evento,
+        categoria_id: body.categoria_id !== undefined ? body.categoria_id : publicacionOriginal.categoria_id,
+        institucion_id: body.institucion_id !== undefined ? body.institucion_id : publicacionOriginal.institucion_id,
+        lugar_institucion: body.lugar_institucion !== undefined ? body.lugar_institucion : publicacionOriginal.lugar_institucion,
+        tipo: body.tipo !== undefined ? body.tipo : publicacionOriginal.tipo,
+        estado: body.estado !== undefined ? body.estado : publicacionOriginal.estado
+    });
 
-        const publicacionActualizada = await this.repository.update(id, {
-            nombre: body.nombre !== undefined ? body.nombre : publicacionOriginal.nombre,
-            descripcion: body.descripcion !== undefined ? body.descripcion : publicacionOriginal.descripcion,
-            fecha_evento: body.fecha_evento !== undefined ? body.fecha_evento : publicacionOriginal.fecha_evento,
-            categoria_id: body.categoria_id !== undefined ? body.categoria_id : publicacionOriginal.categoria_id,
-            institucion_id: body.institucion_id !== undefined ? body.institucion_id : publicacionOriginal.institucion_id,
-            lugar_institucion: body.lugar_institucion !== undefined ? body.lugar_institucion : publicacionOriginal.lugar_institucion,
-            tipo: body.tipo !== undefined ? body.tipo : publicacionOriginal.tipo,
-            estado: body.estado !== undefined ? body.estado : publicacionOriginal.estado
-        });
+    if (!publicacionActualizada) {
+        throw new AppError('No se pudo actualizar la publicación.', 500);
+    }
 
-        if (!publicacionActualizada) {
-            throw new AppError('No se pudo actualizar la publicación.', 500);
-        }
-
-       // ... tu código anterior del Service (pasos 1 y 2) ...
-
+    // 3. Eliminar fotos especificadas
     let fotosEliminar = body.fotosAEliminar;
-    
-    // 👇 AGREGÁ ESTE LOG DE CONTROL ACÁ ARRIBA
-    console.log("🔍 ¿Qué está llegando exactamente en body.fotosAEliminar?:", fotosEliminar, "Tipo de dato:", typeof fotosEliminar);
 
     if (fotosEliminar) {
         if (typeof fotosEliminar === 'string') {
             try { 
                 fotosEliminar = JSON.parse(fotosEliminar); 
-                console.log("✅ Parseado con éxito a Array:", fotosEliminar);
             } catch { 
-                // Si falla el parseo (porque es un string común con el ID suelto), lo metemos en un array
                 fotosEliminar = [fotosEliminar]; 
-                console.log("⚠️ Falló JSON.parse, se convirtió a array manual:", fotosEliminar);
             }
         }
         
-        // Si ya es un array por naturaleza o vino purificado:
-        // Asegurémonos de que si es un array vacío por error del Front (ej: '[]' o ""), no intente recorrerlo
         if (Array.isArray(fotosEliminar) && fotosEliminar.length > 0) {
             for (const fotoId of fotosEliminar) {
-                // ... (tus console.log de intento de borrado que pusimos antes)
-                console.log(`🤖 Intentando borrar la foto con ID: ${fotoId}`);
                 const archivoBorrado = await this.archivosRepository.deleteById(fotoId);
-                console.log(`📸 Resultado del repositorio al borrar:`, archivoBorrado);
+                if (archivoBorrado?.url) {
+                    // Opcional: Borrar de Storage Supabase
+                    // await StorageHelper.eliminarArchivo(archivoBorrado.url);
+                }
             }
-        } else {
-            console.log("❌ fotosEliminar es un array pero está vacío o no es válido");
         }
-    } else {
-        console.log("❌ body.fotosAEliminar vino como UNDEFINED o NULL, por eso no borra nada");
     }
 
-        // 4. Procesar subida de imágenes nuevas
-        if (files && files.length > 0) {
-            // Obtenemos cuántas fotos ya tiene para continuar con el índice del nombre
-            const archivosExistentes = await this.archivosRepository.getByPublicacionId(id) || [];
-            let indexInicio = archivosExistentes.length;
+    // 4. Subir imágenes nuevas (si las hay)
+    if (files && files.length > 0) {
+        const archivosExistentes = await this.archivosRepository.getByPublicacionId(id) || [];
+        let indexInicio = archivosExistentes.length;
 
-            for (let i = 0; i < files.length; i++) {
-                const archivo = files[i];
-                const nombreArchivo = `${id}_${Date.now()}_${indexInicio + i}.jpg`; // Timestamp para evitar sobreescribir
+        for (let i = 0; i < files.length; i++) {
+            const archivo = files[i];
+            const nombreArchivo = `${id}_${Date.now()}_${indexInicio + i}.jpg`;
 
-                const ruta = await StorageHelper.optimizarYSubir(
-                    archivo.buffer,
-                    'publicaciones',
-                    nombreArchivo
-                );
+            const ruta = await StorageHelper.optimizarYSubir(
+                archivo.buffer,
+                'publicaciones',
+                nombreArchivo
+            );
 
-                if (!ruta) continue;
+            if (!ruta) continue;
 
-                await this.archivosRepository.create({
-                    publicacion_id: id,
-                    url: ruta,
-                    mime_type: archivo.mimetype,
-                    es_principal: false // Las subimos como normales inicialmente
-                });
-            }
+            await this.archivosRepository.create({
+                publicacion_id: id,
+                url: ruta,
+                mime_type: archivo.mimetype,
+                es_principal: false
+            });
         }
+    }
 
-        // 5. REGULARIZACIÓN DE FOTO PRINCIPAL: 
-        // Si no quedó ninguna foto marcada como principal, asignamos la primera que encontremos.
-        const todosLosArchivos = await this.archivosRepository.getByPublicacionId(id) || [];
-        const tienePrincipal = todosLosArchivos.some((a: any) => a.es_principal);
+    // 5. Regularización de foto principal
+    const todosLosArchivos = await this.archivosRepository.getByPublicacionId(id) || [];
+    const tienePrincipal = todosLosArchivos.some((a: any) => a.es_principal);
 
-        if (!tienePrincipal && todosLosArchivos.length > 0) {
-            await this.archivosRepository.marcarComoPrincipal(todosLosArchivos[0].id);
-        }
+    if (!tienePrincipal && todosLosArchivos.length > 0) {
+        await this.archivosRepository.marcarComoPrincipal(todosLosArchivos[0].id);
+    }
 
-        return publicacionActualizada;
+    // 6. Retornar la publicación con la lista actualizada de archivos
+    return {
+        ...publicacionActualizada,
+        fotos: todosLosArchivos
     };
+};
 
     getMisPublicaciones = async (
         usuarioId: string
