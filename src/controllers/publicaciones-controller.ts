@@ -166,6 +166,10 @@ const update = async (
     next: NextFunction
 ) => {
     try {
+        console.log("🚀 LLEGÓ PETICIÓN AL CONTROLLER DE UPDATE!");
+        console.log("Params ID:", req.params.id);
+        console.log("Body recibido:", req.body);
+
         const id = req.params.id as string;
         const usuarioId = res.locals.userIdLogged;
 

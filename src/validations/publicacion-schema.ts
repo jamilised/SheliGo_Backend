@@ -81,7 +81,6 @@ export const createPublicacionSchema = z.object({
 
 export const updatePublicacionSchema = createPublicacionSchema.partial().extend({
     // Si mandan el nombre para editar, tiene que cumplir sí o sí con las reglas de creación
-    // Pero si mandan "" (un string vacío), .min(3) lo va a rebotar con este error:
     nombre: z.string()
         .trim()
         .min(3, "El nombre editado debe tener al menos 3 caracteres")
@@ -90,8 +89,10 @@ export const updatePublicacionSchema = createPublicacionSchema.partial().extend(
         .optional(),
 
     // Permitimos explícitamente que la institución e institución_id puedan ser nulas 
-    // por si el usuario quiere desvincular la publicación de una institución
     institucion_id: z.string().uuid("La institución es inválida").nullable().optional(),
     lugar_institucion: z.string().max(100).nullable().optional().transform(limpiarTexto),
     descripcion: z.string().max(1000, "La descripción no puede superar los 1000 caracteres").nullable().optional().transform(limpiarTexto),
+
+    // 🔥 AGREGÁ ESTA LÍNEA ACÁ PARA QUE ZOD NO LO BORRE:
+    fotosAEliminar: z.union([z.string(), z.array(z.string())]).optional()
 });
