@@ -6,7 +6,10 @@ import archivosService from '../services/archivos-service.js';
 const getRecientes = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log('⚡ CONTROLLER PUB: Obteniendo recientes');
-        const publicaciones = await publicacionesService.getRecentPublicaciones();
+
+        const publicaciones =
+            await publicacionesService.getRecentPublicaciones();
+
         return res.status(200).json({
             status: 'success',
             data: { publicaciones }
@@ -19,8 +22,13 @@ const getRecientes = async (req: Request, res: Response, next: NextFunction) => 
 const search = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log('⚡ CONTROLLER PUB: Iniciando búsqueda filtrada');
-        // El middleware 'validateQuery' ya validó y limpió req.query ✨
-        const publicaciones = await publicacionesService.searchPublicaciones(req.query as any);
+
+        // El middleware 'validateQuery' ya validó y limpió req.query
+        const publicaciones =
+            await publicacionesService.searchPublicaciones(
+                req.query as any
+            );
+
         return res.status(200).json({
             status: 'success',
             data: { publicaciones }
@@ -30,10 +38,17 @@ const search = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-const getDetalle = async (req: Request, res: Response, next: NextFunction) => {
+const getDetalle = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     try {
         const id = req.params.id as string;
-        const publicacion = await publicacionesService.getDetalle(id);
+
+        const publicacion =
+            await publicacionesService.getDetalle(id);
+
         return res.status(200).json({
             status: 'success',
             data: { publicacion }
@@ -43,10 +58,17 @@ const getDetalle = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-const getArchivos = async (req: Request, res: Response, next: NextFunction) => {
+const getArchivos = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     try {
         const id = req.params.id as string;
-        const archivos = await archivosService.getArchivos(id);
+
+        const archivos =
+            await archivosService.getArchivos(id);
+
         return res.status(200).json({
             status: 'success',
             data: { archivos }
@@ -56,10 +78,17 @@ const getArchivos = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
-const getPreguntas = async (req: Request, res: Response, next: NextFunction) => {
+const getPreguntas = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     try {
         const id = req.params.id as string;
-        const preguntas = await preguntasService.getPreguntas(id);
+
+        const preguntas =
+            await preguntasService.getPreguntas(id);
+
         return res.status(200).json({
             status: 'success',
             data: { preguntas }
@@ -69,18 +98,29 @@ const getPreguntas = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
-const createPregunta = async (req: Request, res: Response, next: NextFunction) => {
+const createPregunta = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     try {
         const id = req.params.id as string;
         const { contenido } = req.body;
         const usuarioId = res.locals.userIdLogged;
 
-        const nuevaPregunta = await preguntasService.createPregunta(id, usuarioId, contenido);
+        const nuevaPregunta =
+            await preguntasService.createPregunta(
+                id,
+                usuarioId,
+                contenido
+            );
 
         return res.status(201).json({
             status: 'success',
             message: 'Pregunta creada correctamente',
-            data: { pregunta: nuevaPregunta }
+            data: {
+                pregunta: nuevaPregunta
+            }
         });
     } catch (error) {
         return next(error);
@@ -93,11 +133,12 @@ const create = async (
     next: NextFunction
 ) => {
     try {
-        const publicacion = await publicacionesService.createPublicacion(
-            req.body,
-            req.files,
-            res.locals.userIdLogged
-        );
+        const publicacion =
+            await publicacionesService.createPublicacion(
+                req.body,
+                req.files,
+                res.locals.userIdLogged
+            );
 
         return res.status(201).json({
             status: "success",
@@ -138,15 +179,20 @@ const createRespuesta = async (
     next: NextFunction
 ) => {
     try {
-        const preguntaId = req.params.preguntaId as string;
-        const usuarioId = res.locals.userIdLogged;
+        const preguntaId =
+            req.params.preguntaId as string;
+
+        const usuarioId =
+            res.locals.userIdLogged;
+
         const { contenido } = req.body;
 
-        const respuesta = await preguntasService.createRespuesta(
-            preguntaId,
-            usuarioId,
-            contenido
-        );
+        const respuesta =
+            await preguntasService.createRespuesta(
+                preguntaId,
+                usuarioId,
+                contenido
+            );
 
         return res.status(201).json({
             status: "success",
@@ -166,24 +212,39 @@ const update = async (
     next: NextFunction
 ) => {
     try {
-        console.log("🚀 LLEGÓ PETICIÓN AL CONTROLLER DE UPDATE!");
-        console.log("Params ID:", req.params.id);
-        console.log("Body recibido:", req.body);
+        console.log(
+            "🚀 LLEGÓ PETICIÓN AL CONTROLLER DE UPDATE!"
+        );
+
+        console.log(
+            "Params ID:",
+            req.params.id
+        );
+
+        console.log(
+            "Body recibido:",
+            req.body
+        );
 
         const id = req.params.id as string;
-        const usuarioId = res.locals.userIdLogged;
 
-        const publicacion = await publicacionesService.updatePublicacion(
-            id,
-            req.body,
-            req.files,
-            usuarioId
-        );
+        const usuarioId =
+            res.locals.userIdLogged;
+
+        const publicacion =
+            await publicacionesService.updatePublicacion(
+                id,
+                req.body,
+                req.files,
+                usuarioId
+            );
 
         return res.status(200).json({
             status: "success",
             message: "Publicación actualizada correctamente",
-            data: { publicacion }
+            data: {
+                publicacion
+            }
         });
     } catch (error) {
         next(error);
@@ -196,9 +257,10 @@ const getMisPublicaciones = async (
     next: NextFunction
 ) => {
     try {
-        const publicaciones = await publicacionesService.getMisPublicaciones(
-            res.locals.userIdLogged
-        );
+        const publicaciones =
+            await publicacionesService.getMisPublicaciones(
+                res.locals.userIdLogged
+            );
 
         return res.status(200).json({
             status: "success",
