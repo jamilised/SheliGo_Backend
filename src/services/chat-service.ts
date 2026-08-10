@@ -1,6 +1,7 @@
 import ChatRepository from '../repositories/chat-repository.js';
 import UsuariosRepository from '../repositories/usuarios-repository.js';
 import AppError from '../errors/app-error.js';
+import { StorageHelper } from '../helpers/storage-helper.js';
 
 class ChatService {
     private chatRepo = ChatRepository;
