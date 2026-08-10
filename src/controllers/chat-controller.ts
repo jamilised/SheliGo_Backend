@@ -80,12 +80,10 @@ const getMisSalas = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const usuarioId = res.locals.userIdLogged as string; 
         
-        // Capturamos ambos parámetros opcionales de la URL
+        // 🚀 Leemos el query parameter de la URL (ej: /api/chat/salas?filtro=no_leidas)
         const filtro = req.query.filtro as string | undefined;
-        const busqueda = req.query.busqueda as string | undefined;
 
-        // Pasamos ambos al servicio
-        const salas = await ChatService.obtenerMisSalas(usuarioId, filtro, busqueda);
+        const salas = await ChatService.obtenerMisSalas(usuarioId, filtro);
 
         return res.status(200).json({
             status: 'success',
