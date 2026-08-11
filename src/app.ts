@@ -39,7 +39,7 @@ app.use(
         origin: [
             "http://localhost:5173", 
             "http://localhost:8081", 
-            "https://sheligo-fub1ieqxe-sheli-go.vercel.app" 
+            "https://sheligo.vercel.app/" 
         ],
         methods: [
             "GET",
