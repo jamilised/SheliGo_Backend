@@ -20,7 +20,7 @@ router.put(
     '/cambiar-contrasena',
     authMiddleware,
     validateBody(cambiarContrasenaSchema),
-    usuariosController.cambiarContrasena // 👈 Usamos la función dentro del objeto controller
+    usuariosController.cambiarContrasena // Usamos la función dentro del objeto controller
 );
 
 
