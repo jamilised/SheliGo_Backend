@@ -290,6 +290,46 @@ class PublicacionesRepository {
 
     }
 
+    // Editar una publicación existente
+    update = async (id: string, p: {
+        categoria_id: string;
+        institucion_id: string | null;
+        nombre: string;
+        descripcion: string | null;
+        fecha_evento: string;
+        tipo: string;
+        estado: string;
+        lugar_institucion: string | null;
+    }) => {
+        const sql = `
+            UPDATE publicaciones
+            SET 
+                categoria_id = $1,
+                institucion_id = $2,
+                nombre = $3,
+                descripcion = $4,
+                fecha_evento = $5,
+                tipo = $6,
+                estado = $7,
+                lugar_institucion = $8,
+                updated_at = NOW()
+            WHERE id = $9
+            RETURNING *
+        `;
+
+        return await this.db.queryOne(sql, [
+            p.categoria_id,
+            p.institucion_id,
+            p.nombre,
+            p.descripcion,
+            p.fecha_evento,
+            p.tipo,
+            p.estado,
+            p.lugar_institucion,
+            id
+        ]);
+    };
+
 }
 
-export default new PublicacionesRepository
+export default new PublicacionesRepository()

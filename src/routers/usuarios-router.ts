@@ -4,7 +4,7 @@ import { authMiddleware } from '../middlewares/auth-middleware.js';
 
 import upload from "../middlewares/upload-middleware.js";
 import { validateBody } from "../middlewares/validation-middleware.js";
-import { updatePerfilSchema } from "../validations/usuarios-schema.js";
+import { updatePerfilSchema, cambiarContrasenaSchema } from "../validations/usuarios-schema.js";
 
 
 const router = Router();
@@ -16,12 +16,12 @@ router.get(
     usuariosController.getMe
 );
 
-/*router.put(
+router.put(
     '/cambiar-contrasena',
     authMiddleware,
     validateBody(cambiarContrasenaSchema),
     usuariosController.cambiarContrasena // 👈 Usamos la función dentro del objeto controller
-);*/
+);
 
 
 router.put(
