@@ -37,8 +37,9 @@ pueda consumir el backend.
 app.use(
     cors({
         origin: [
-            "http://localhost:5173", // React Web
-            "http://localhost:8081"  // Expo
+            "http://localhost:5173", 
+            "http://localhost:8081", 
+            "https://sheligo-fub1ieqxe-sheli-go.vercel.app" 
         ],
         methods: [
             "GET",
