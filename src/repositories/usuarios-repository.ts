@@ -269,4 +269,4 @@ class UsuariosRepository {
     }
 }
 
-export default new UsuariosRepository();
+export default new UsuariosRepository

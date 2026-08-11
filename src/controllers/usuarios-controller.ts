@@ -19,6 +19,28 @@ const getMe = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
+const cambiarContrasena = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const usuarioId = res.locals.userIdLogged || res.locals.userId; // 👈 Proba ambas por si tu middleware usa userId
+        console.log("🔍 BUSCANDO USUARIO CON ID:", usuarioId);
+
+        const { contrasenaActual, nuevaContrasena } = req.body;
+
+        await usuariosService.cambiarContrasena(
+            usuarioId,
+            contrasenaActual,
+            nuevaContrasena
+        );
+
+        return res.status(200).json({
+            status: "success",
+            message: "Contraseña actualizada correctamente"
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const editarPerfil = async (
     req: Request,
     res: Response,
@@ -59,5 +81,6 @@ const editarPerfil = async (
 // Cumple regla: Objeto con funciones flecha para Controllers
 export default {
     getMe,
+    cambiarContrasena,
     editarPerfil
 };
