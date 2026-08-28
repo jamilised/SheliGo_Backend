@@ -67,6 +67,7 @@ class UsuariosRepository {
     }
 
     // Inserta el nuevo usuario y retorna la Entidad Usuario real
+    // usuarios-repository.ts
     create = async (u: {
         id?: string;
         nombre: string;
@@ -76,57 +77,30 @@ class UsuariosRepository {
         rol: string;
         password_hash: string | null;
     }) => {
-
-        console.log(
-            'EJECUTANDO: create en UsuariosRepository para:',
-            u.email
-        );
-
+        // Si viene ID (Google/Supabase) lo incluimos; si no, dejamos que PostgreSQL lo genere o insertamos DEFAULT
         const sql = `
-            INSERT INTO usuarios (
-                nombre,
-                apellido,
-                email,
-                telefono,
-                rol,
-                password_hash,
-                created_at,
-                updated_at
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-            RETURNING
-                id,
-                nombre,
-                apellido,
-                email,
-                telefono,
-                created_at,
-                updated_at,
-                rol,
-                foto
-        `;
+        INSERT INTO usuarios (
+            ${u.id ? 'id,' : ''}
+            nombre,
+            apellido,
+            email,
+            telefono,
+            rol,
+            password_hash,
+            created_at,
+            updated_at
+        )
+        VALUES (${u.id ? '$1,' : ''} ${u.id ? '$2, $3, $4, $5, $6, $7' : '$1, $2, $3, $4, $5, $6'}, NOW(), NOW())
+        RETURNING id, nombre, apellido, email, telefono, created_at, updated_at, rol, foto
+    `;
 
-        const values = [
-            u.nombre,
-            u.apellido,
-            u.email,
-            u.telefono,
-            u.rol,
-            u.password_hash
-        ];
+        const values = u.id
+            ? [u.id, u.nombre, u.apellido, u.email, u.telefono, u.rol, u.password_hash]
+            : [u.nombre, u.apellido, u.email, u.telefono, u.rol, u.password_hash];
 
-        const res =
-            await this.db.queryOne(sql, values);
-
-        console.log(
-            'USUARIO INSERTADO EN DB CON ID:',
-            res?.id
-        );
-
+        const res = await this.db.queryOne(sql, values);
         if (!res) return null;
 
-        // Convertimos el resultado de la base de datos
-        // en tu objeto Entity "Usuario"
         return new Usuario(
             res.id,
             res.nombre,

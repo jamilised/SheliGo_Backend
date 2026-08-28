@@ -99,6 +99,75 @@ class AuthService {
         console.log('🎉 PROCESO DE REGISTRO FINALIZADO CON ÉXITO');
         return nuevoUsuario;
     };
+
+    loginConGoogle = async (tokenSupabase: string) => {
+        const { supabase } = await import('../database/supabase.js');
+
+        // 1. Validar Token de Supabase
+        const { data: { user }, error } = await supabase.auth.getUser(tokenSupabase);
+        if (error || !user) {
+            throw new AppError('Token de Google/Supabase inválido o expirado.', 401);
+        }
+
+        // 2. Buscar primero por ID de Supabase
+        let usuarioLocal = await this.usuariosRepo.getById(user.id);
+
+        // 3. Si no existe por ID, buscar si ya existe por Email (registro previo tradicional)
+        if (!usuarioLocal && user.email) {
+            const usuarioPorEmail = await this.usuariosRepo.getByEmail(user.email);
+
+            if (usuarioPorEmail) {
+                // El usuario ya existía localmente con ese email
+                usuarioLocal = usuarioPorEmail;
+            }
+        }
+
+        // 4. Si tampoco existe por email, es un registro 100% nuevo -> INSERT
+        if (!usuarioLocal) {
+            const fullName = (user.user_metadata?.full_name || user.user_metadata?.name || 'Usuario Google').trim();
+            let primerNombre = fullName;
+            let elApellido = ' ';
+
+            const espacioIndex = fullName.indexOf(' ');
+            if (espacioIndex > 0) {
+                primerNombre = fullName.substring(0, espacioIndex);
+                elApellido = fullName.substring(espacioIndex + 1);
+            }
+
+            usuarioLocal = await this.usuariosRepo.create({
+                id: user.id, // Sincroniza el UUID de Supabase
+                nombre: primerNombre,
+                apellido: elApellido,
+                email: user.email!,
+                telefono: null,
+                rol: 'user',
+                password_hash: null
+            });
+
+            if (!usuarioLocal) {
+                throw new AppError('Error al sincronizar el usuario en la base de datos.', 500);
+            }
+        }
+
+        // 5. Firmar token JWT propio
+        const token = jwt.sign(
+            { userId: usuarioLocal.id },
+            process.env.JWT_SECRET!,
+            { expiresIn: '24h' }
+        );
+
+        return {
+            token,
+            usuario: {
+                id: usuarioLocal.id,
+                nombre: usuarioLocal.nombre,
+                apellido: usuarioLocal.apellido,
+                email: usuarioLocal.email,
+                rol: usuarioLocal.rol,
+                foto: usuarioLocal.foto || 'usuarios/default.png'
+            }
+        };
+    };
 }
 
 export default new AuthService();
