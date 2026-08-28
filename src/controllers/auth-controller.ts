@@ -77,10 +77,28 @@ const loginConGoogle = async (req: Request, res: Response, next: NextFunction) =
     }
 };
 
+const asociarInstituciones = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = (req as any).user.userId; // Obtenido del token JWT mediante authMiddleware
+        const { instituciones_ids } = req.body;
+
+        const instituciones = await authService.asociarInstitucionesGoogle(userId, instituciones_ids);
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Instituciones asociadas correctamente',
+            data: { instituciones }
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 // Cumple regla: Objeto con funciones para Controllers
 export default {
     login,
     register,
     logout,
-    loginConGoogle
+    loginConGoogle,
+    asociarInstituciones
 };

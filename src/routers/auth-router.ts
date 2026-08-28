@@ -52,4 +52,10 @@ router.post(
 
 router.post('/google', authController.loginConGoogle);
 
+router.post(
+    '/completar-instituciones', 
+    authMiddleware, 
+    authController.asociarInstituciones
+);
+
 export default router;

@@ -241,6 +241,42 @@ class UsuariosRepository {
             ]
         );
     }
+
+    // Asocia múltiples instituciones a un usuario
+    asociarInstituciones = async (usuarioId: string, institucionesIds: string[]) => {
+        if (!institucionesIds || institucionesIds.length === 0) return;
+
+        const values: any[] = [usuarioId];
+        const valueTuples = institucionesIds.map((instId, index) => {
+            values.push(instId);
+            return `(CURRENT_DATE, $1, $${index + 2})`;
+        }).join(', ');
+
+        const sql = `
+        INSERT INTO usuarios_instituciones (fecha_union, usuario_id, institucion_id)
+        VALUES ${valueTuples}
+    `;
+
+        // Usamos el pool directamente para ejecutar un INSERT múltiple que no retorna filas
+        await this.db.getDBPool().query(sql, values);
+    };
+
+    // Obtiene las instituciones asociadas al usuario
+    getInstitucionesByUsuarioId = async (usuarioId: string) => {
+        const sql = `
+        SELECT 
+            i.id, 
+            i.nombre, 
+            i.direccion, 
+            i.foto 
+        FROM instituciones i
+        JOIN usuarios_instituciones ui ON ui.institucion_id = i.id
+        WHERE ui.usuario_id = $1
+    `;
+
+        // Usamos queryAll ya expuesto por DbPg
+        return await this.db.queryAll(sql, [usuarioId]);
+    };
 }
 
 export default new UsuariosRepository

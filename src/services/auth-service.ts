@@ -40,8 +40,10 @@ class AuthService {
         };
     };
 
+    // auth-service.ts
+
     register = async (body: any, files: any) => {
-        const { nombre, apellido, email, telefono, password } = body;
+        const { nombre, apellido, email, telefono, password, instituciones_ids } = body;
 
         console.log('⚡ SERVICIO AUTH: Iniciando proceso de registro para:', email);
 
@@ -56,7 +58,7 @@ class AuthService {
         const saltRounds = 12;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // --- 3. CREACIÓN DEL REGISTRO ---
+        // --- 3. CREACIÓN DEL REGISTRO DE USUARIO ---
         const nuevoUsuario = await this.usuariosRepo.create({
             nombre: nombre.trim(),
             apellido: apellido.trim(),
@@ -70,14 +72,34 @@ class AuthService {
             throw new AppError('No se pudo completar el registro del usuario.', 500);
         }
 
-        // --- 4. PROCESAMIENTO Y SUBIDA DE IMAGEN REUTILIZABLE ---
+        // --- 4. ASOCIACIÓN DE INSTITUCIONES ---
+        let arrayInstituciones: string[] = [];
+
+        if (instituciones_ids) {
+            if (Array.isArray(instituciones_ids)) {
+                arrayInstituciones = instituciones_ids;
+            } else if (typeof instituciones_ids === 'string') {
+                try {
+                    // Si viene como string JSON desde FormData ej: '["uuid1", "uuid2"]'
+                    arrayInstituciones = JSON.parse(instituciones_ids);
+                } catch {
+                    // Si viene como una sola string limpia ej: 'uuid1'
+                    arrayInstituciones = [instituciones_ids];
+                }
+            }
+
+            if (arrayInstituciones.length > 0) {
+                await this.usuariosRepo.asociarInstituciones(nuevoUsuario.id, arrayInstituciones);
+            }
+        }
+
+        // --- 5. PROCESAMIENTO Y SUBIDA DE IMAGEN REUTILIZABLE ---
         let fotoFinalPath = 'usuarios/default.png';
 
         if (files && files.length > 0) {
             const archivoImagen = files[0];
             const fileName = `${nuevoUsuario.id}.jpg`;
 
-            // Invocamos al helper pasándole su configuración específica (cuadrado 400x400) 🎯
             const pathSubido = await StorageHelper.optimizarYSubir(
                 archivoImagen.buffer,
                 'usuarios',
@@ -87,7 +109,6 @@ class AuthService {
 
             if (pathSubido) {
                 fotoFinalPath = pathSubido;
-                // Sincronizamos la nueva ruta en la base de datos
                 await this.usuariosRepo.updateFoto(nuevoUsuario.id, fotoFinalPath);
             }
         } else {
@@ -96,34 +117,35 @@ class AuthService {
         }
 
         nuevoUsuario.foto = fotoFinalPath;
+
+        // Obtenemos el detalle completo de las instituciones asociadas para devolver al cliente
+        const institucionesAsociadas = await this.usuariosRepo.getInstitucionesByUsuarioId(nuevoUsuario.id);
+
         console.log('🎉 PROCESO DE REGISTRO FINALIZADO CON ÉXITO');
-        return nuevoUsuario;
+
+        return {
+            ...nuevoUsuario,
+            instituciones: institucionesAsociadas || []
+        };
     };
 
     loginConGoogle = async (tokenSupabase: string) => {
         const { supabase } = await import('../database/supabase.js');
 
-        // 1. Validar Token de Supabase
         const { data: { user }, error } = await supabase.auth.getUser(tokenSupabase);
         if (error || !user) {
             throw new AppError('Token de Google/Supabase inválido o expirado.', 401);
         }
 
-        // 2. Buscar primero por ID de Supabase
         let usuarioLocal = await this.usuariosRepo.getById(user.id);
+        let esNuevoUsuario = false;
 
-        // 3. Si no existe por ID, buscar si ya existe por Email (registro previo tradicional)
         if (!usuarioLocal && user.email) {
-            const usuarioPorEmail = await this.usuariosRepo.getByEmail(user.email);
-
-            if (usuarioPorEmail) {
-                // El usuario ya existía localmente con ese email
-                usuarioLocal = usuarioPorEmail;
-            }
+            usuarioLocal = await this.usuariosRepo.getByEmail(user.email);
         }
 
-        // 4. Si tampoco existe por email, es un registro 100% nuevo -> INSERT
         if (!usuarioLocal) {
+            esNuevoUsuario = true;
             const fullName = (user.user_metadata?.full_name || user.user_metadata?.name || 'Usuario Google').trim();
             let primerNombre = fullName;
             let elApellido = ' ';
@@ -135,7 +157,7 @@ class AuthService {
             }
 
             usuarioLocal = await this.usuariosRepo.create({
-                id: user.id, // Sincroniza el UUID de Supabase
+                id: user.id,
                 nombre: primerNombre,
                 apellido: elApellido,
                 email: user.email!,
@@ -149,7 +171,8 @@ class AuthService {
             }
         }
 
-        // 5. Firmar token JWT propio
+        const instituciones = (await this.usuariosRepo.getInstitucionesByUsuarioId(usuarioLocal.id)) || [];
+
         const token = jwt.sign(
             { userId: usuarioLocal.id },
             process.env.JWT_SECRET!,
@@ -158,15 +181,26 @@ class AuthService {
 
         return {
             token,
+            requiereCompletarPerfil: esNuevoUsuario || instituciones.length === 0,
             usuario: {
                 id: usuarioLocal.id,
                 nombre: usuarioLocal.nombre,
                 apellido: usuarioLocal.apellido,
                 email: usuarioLocal.email,
                 rol: usuarioLocal.rol,
-                foto: usuarioLocal.foto || 'usuarios/default.png'
+                foto: usuarioLocal.foto || 'usuarios/default.png',
+                instituciones
             }
         };
+    };
+
+    asociarInstitucionesGoogle = async (userId: string, institucionesIds: string[]) => {
+        if (!institucionesIds || institucionesIds.length === 0) {
+            throw new AppError('Debes seleccionar al menos una institución.', 400);
+        }
+
+        await this.usuariosRepo.asociarInstituciones(userId, institucionesIds);
+        return await this.usuariosRepo.getInstitucionesByUsuarioId(userId);
     };
 }
 
