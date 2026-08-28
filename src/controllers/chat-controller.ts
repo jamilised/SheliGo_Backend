@@ -51,15 +51,22 @@ const enviarMensaje = async (req: Request, res: Response, next: NextFunction) =>
     try {
         const emisorId = res.locals.userIdLogged as string;
         const { sala_id, contenido } = req.body;
+        const archivoFoto = req.file; // Captura el archivo si fue subido con multipart/form-data
 
-        if (!sala_id || !contenido) {
+        if (!sala_id) {
             return res.status(400).json({
                 status: 'error',
-                message: 'Faltan campos obligatorios: sala_id o contenido.'
+                message: 'El campo sala_id es obligatorio.'
             });
         }
 
-        const nuevoMensaje = await ChatService.guardarMensaje(sala_id as string, emisorId, contenido as string);
+        // Enviamos al servicio el texto o el archivo capturado
+        const nuevoMensaje = await ChatService.guardarMensaje(
+            sala_id as string, 
+            emisorId, 
+            contenido as string | undefined,
+            archivoFoto
+        );
 
         return res.status(201).json({
             status: 'success',
@@ -68,9 +75,7 @@ const enviarMensaje = async (req: Request, res: Response, next: NextFunction) =>
     } catch (error) {
         return next(error);
     }
-    
 };
-
 const getMisSalas = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const usuarioId = res.locals.userIdLogged as string; 

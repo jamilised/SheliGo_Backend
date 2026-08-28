@@ -1,6 +1,7 @@
 import ChatRepository from '../repositories/chat-repository.js';
 import UsuariosRepository from '../repositories/usuarios-repository.js';
 import AppError from '../errors/app-error.js';
+import { StorageHelper } from '../helpers/storage-helper.js';
 
 class ChatService {
     private chatRepo = ChatRepository;
@@ -78,15 +79,24 @@ class ChatService {
     };
 
     // Guardar un mensaje nuevo enviado por el usuario
-    guardarMensaje = async (salaId: string, emisorId: string, contenido: string) => {
+    guardarMensaje = async (
+        salaId: string, 
+        emisorId: string, 
+        contenido?: string, 
+        archivoFoto?: Express.Multer.File
+    ) => {
         console.log(`⚡ SERVICIO CHAT: Guardando nuevo mensaje en sala ${salaId}`);
 
         if (!this.esUUIDValido(salaId)) {
             throw new AppError('El ID de la sala no es válido.', 400);
         }
 
-        if (!contenido || contenido.trim() === '') {
-            throw new AppError('El contenido del mensaje no puede estar vacío.', 400);
+        // 🚨 Validar que el mensaje tenga o contenido de texto o una foto
+        const tieneTexto = contenido && contenido.trim().length > 0;
+        const tieneFoto = !!archivoFoto;
+
+        if (!tieneTexto && !tieneFoto) {
+            throw new AppError('El mensaje debe contener texto o una imagen.', 400);
         }
 
         const esMiembro = await this.chatRepo.esParticipante(salaId, emisorId);
@@ -94,7 +104,34 @@ class ChatService {
             throw new AppError('No podés enviar mensajes a una sala a la que no pertenecés.', 403);
         }
 
-        return await this.chatRepo.enviarMensaje(salaId, emisorId, contenido.trim());
+        let contenidoFinal = contenido ? contenido.trim() : '';
+
+        // 🖼️ Si mandaron foto, la procesamos y guardamos la ruta relativa
+        if (tieneFoto) {
+            const nombreArchivoUnico = `chat-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.jpg`;
+
+            // Subimos al bucket/carpeta 'chats'
+            const fotoPath = await StorageHelper.optimizarYSubir(
+                archivoFoto.buffer,
+                'chats',
+                nombreArchivoUnico
+            );
+
+            if (!fotoPath) {
+                throw new AppError('Error al procesar o subir la imagen del chat. Verifica que el archivo sea una imagen válida.', 500);
+            }
+
+            contenidoFinal = fotoPath; // Se guarda como: chats/chat-1786...jpg
+        }
+
+        const mensajeCreado = await this.chatRepo.enviarMensaje(salaId, emisorId, contenidoFinal);
+
+        // Si el contenido subido es una foto, formateamos o adjuntamos la URL completa para el cliente
+        if (tieneFoto) {
+            mensajeCreado.contenido_url = StorageHelper.buildUrl(mensajeCreado.contenido);
+        }
+
+        return mensajeCreado;
     };
 
     // Eliminar un mensaje validando que el emisor sea el dueño
