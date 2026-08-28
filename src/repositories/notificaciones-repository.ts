@@ -44,6 +44,35 @@ class NotificacionesRepository {
 
     };
 
+    getByUsuarioId = async (
+        usuarioId: string
+    ) => {
+
+        const sql = `
+            SELECT
+                id,
+                leida,
+                created_at,
+                updated_at,
+                tipo,
+                usuario_id,
+                publicacion_id,
+                titulo,
+                contenido
+            FROM notificaciones
+            WHERE usuario_id = $1
+            ORDER BY created_at DESC
+        `;
+
+        return await this.db.queryAll(
+            sql,
+            [usuarioId]
+        );
+
+    };
+
 }
+
+
 
 export default new NotificacionesRepository();

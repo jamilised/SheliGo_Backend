@@ -21,6 +21,15 @@ class NotificacionesService {
 
     };
 
+    getMisNotificaciones = async (
+        usuarioId: string
+    ) => {
+
+        return await this.repository
+            .getByUsuarioId(usuarioId);
+
+    };
+
 }
 
 export default new NotificacionesService();
