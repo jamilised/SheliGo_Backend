@@ -40,7 +40,19 @@ export const updatePerfilSchema = z.object({
         .transform(capitalizar)
         .optional(),
 
-    eliminarFoto: z.coerce.boolean().optional()
+    eliminarFoto: z.coerce.boolean().optional(),
+
+    instituciones_ids: z.union([
+        z.array(z.string().uuid('UUID de institución inválido')),
+        z.string().transform((val) => {
+            try {
+                const parsed = JSON.parse(val);
+                if (Array.isArray(parsed)) return parsed;
+                return [val];
+            } catch {
+                return [val];
+            }
+        })
+    ]).optional()
 
 });
-
