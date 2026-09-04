@@ -277,6 +277,20 @@ class UsuariosRepository {
         // Usamos queryAll ya expuesto por DbPg
         return await this.db.queryAll(sql, [usuarioId]);
     };
+
+    // Agregar al final de la clase UsuariosRepository en usuarios-repository.ts
+
+    // Reemplaza todas las instituciones del usuario por la nueva lista
+    reemplazarInstituciones = async (usuarioId: string, institucionesIds: string[]) => {
+        // 1. Eliminamos las asociaciones anteriores
+        const sqlDelete = `DELETE FROM usuarios_instituciones WHERE usuario_id = $1`;
+        await this.db.getDBPool().query(sqlDelete, [usuarioId]);
+
+        // 2. Asociamos las nuevas si el array no está vacío
+        if (institucionesIds && institucionesIds.length > 0) {
+            await this.asociarInstituciones(usuarioId, institucionesIds);
+        }
+    };
 }
 
 export default new UsuariosRepository

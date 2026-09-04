@@ -4,10 +4,13 @@ import { authMiddleware } from '../middlewares/auth-middleware.js';
 
 const router = Router();
 
+// GET /api/instituciones/selector (PÚBLICO - Para registros/desplegables)
+router.get('/selector', institucionesController.getParaSelector);
+
 // GET /api/instituciones/recientes
 router.get('/recientes', authMiddleware, institucionesController.getRecientes);
 
-// GET /api/instituciones (Trae todas)
+// GET /api/instituciones (Trae todas con datos completos)
 router.get('/', authMiddleware, institucionesController.getAll);
 
 export default router;
