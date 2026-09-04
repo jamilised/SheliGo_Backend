@@ -5,6 +5,16 @@ import { StorageHelper } from '../helpers/storage-helper.js';
 class InstitucionesService {
     private institucionesRepo = InstitucionesRepository;
 
+    getInstitucionesParaSelector = async () => {
+        const instituciones = await this.institucionesRepo.getParaSelector();
+
+        if (instituciones === null) {
+            throw new AppError('Error al recuperar el listado de instituciones', 500);
+        }
+
+        return instituciones;
+    };
+
     getRecentInstituciones = async () => {
         const instituciones = await this.institucionesRepo.getRecent();
 
@@ -13,27 +23,25 @@ class InstitucionesService {
         }
 
         const institucionesConUrlCompleta = instituciones.map((inst: any) => {
-        // Transformamos 'instituciones/nombre.ext' en la URL completa
-        inst.foto = StorageHelper.buildUrl(inst.foto); // o el nombre que tenga tu columna de foto
-        return inst;
-    });
+            inst.foto = StorageHelper.buildUrl(inst.foto);
+            return inst;
+        });
 
         return institucionesConUrlCompleta;
     };
 
     getAllInstituciones = async () => {
-    const instituciones = await this.institucionesRepo.getAll();
+        const instituciones = await this.institucionesRepo.getAll();
 
-    if (instituciones === null) {
-        throw new AppError('Error al recuperar las instituciones', 500);
-    }
+        if (instituciones === null) {
+            throw new AppError('Error al recuperar las instituciones', 500);
+        }
 
-    // Mapeamos las fotos con la URL completa
-    return instituciones.map((inst: any) => {
-        inst.foto = StorageHelper.buildUrl(inst.foto);
-        return inst;
-    });
-};
+        return instituciones.map((inst: any) => {
+            inst.foto = StorageHelper.buildUrl(inst.foto);
+            return inst;
+        });
+    };
 }
 
-export default new InstitucionesService;
+export default new InstitucionesService();
