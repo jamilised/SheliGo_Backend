@@ -71,6 +71,50 @@ class NotificacionesRepository {
 
     };
 
+    markAsRead = async (
+        notificacionId: string,
+        usuarioId: string
+    ) => {
+
+        const sql = `
+        UPDATE notificaciones
+        SET
+            leida = true,
+            updated_at = NOW()
+        WHERE
+            id = $1
+            AND usuario_id = $2
+        RETURNING *
+    `;
+
+        return await this.db.queryOne(sql, [
+            notificacionId,
+            usuarioId
+        ]);
+
+    };
+
+    markAllAsRead = async (
+        usuarioId: string
+    ) => {
+
+        const sql = `
+        UPDATE notificaciones
+        SET
+            leida = true,
+            updated_at = NOW()
+        WHERE
+            usuario_id = $1
+            AND leida = false
+        RETURNING id
+    `;
+
+        return await this.db.queryAll(sql, [
+            usuarioId
+        ]);
+
+    };
+
 }
 
 

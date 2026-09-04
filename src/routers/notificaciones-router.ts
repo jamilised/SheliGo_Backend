@@ -12,15 +12,22 @@ const router = Router();
 
 
 router.get(
-
     '/',
-
     authMiddleware,
-
-    notificacionesController
-        .getMisNotificaciones
-
+    notificacionesController.getMisNotificaciones
 );
 
+router.patch(
+    "/:id/leida",
+    authMiddleware,
+    notificacionesController.marcarComoLeida
+);
+
+
+router.patch(
+    "/leidas",
+    authMiddleware,
+    notificacionesController.marcarTodasComoLeidas
+);
 
 export default router;
