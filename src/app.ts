@@ -21,10 +21,13 @@ import institucionesRouter
 import chatRouter 
   from './routers/chat-router.js';
 
+import notificacionesRouter
+    from './routers/notificaciones-router.js';
 
 import { errorMiddleware } 
   from './middlewares/error-middleware.js';
 
+  
 const app = express();
 
 app.use(helmet());
@@ -82,6 +85,11 @@ app.use(
 app.use(
   '/chat', 
   chatRouter
+);
+
+app.use(
+    '/api/notificaciones',
+    notificacionesRouter
 );
 
 app.use(

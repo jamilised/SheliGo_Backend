@@ -11,10 +11,15 @@ import AppError
 import NotFoundError
     from "../errors/not-found-error.js";
 
+import NotificacionesService
+    from '../services/notificaciones-service.js';
+
+
 class PreguntasService {
 
     repository = PreguntasRepository;
     private publicacionesRepository = PublicacionesRepository;
+    private notificacionesService = NotificacionesService;
 
     getPreguntas = async (
         publicacionId: string
@@ -61,12 +66,52 @@ class PreguntasService {
         contenido: string
     ) => {
 
-        return await this.repository
-            .create(
+        // 1. Buscamos la publicación
+        const publicacion =
+            await this.publicacionesRepository.getById(
+                publicacionId
+            );
+
+        if (!publicacion) {
+            throw new NotFoundError(
+                "Publicación no encontrada"
+            );
+        }
+
+        // 2. Creamos la pregunta
+        const pregunta =
+            await this.repository.create(
                 publicacionId,
                 usuarioId,
                 contenido
-            )
+            );
+
+        // 3. No notificamos si el dueño se pregunta a sí mismo
+        if (publicacion.usuario_id !== usuarioId) {
+
+            // 4. Creamos la notificación
+            await this.notificacionesService
+                .crearNotificacion({
+                    usuario_id:
+                        publicacion.usuario_id,
+
+                    publicacion_id:
+                        publicacionId,
+
+                    tipo:
+                        "nueva_pregunta",
+
+                    titulo:
+                        "Nueva pregunta",
+
+                    contenido:
+                        "Alguien realizó una pregunta en tu publicación."
+                });
+
+        }
+
+        // 5. Devolvemos la pregunta creada
+        return pregunta;
 
     }
 
