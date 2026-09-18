@@ -120,13 +120,16 @@ class PublicacionesRepository {
         const values: any[] = [];
         let paramIndex = 1;
 
-        // Si no filtran explícitamente por estado, mostramos solo las activas
         if (!filtros.estado) {
             sql += ` AND p.estado = 'activa'`;
-        } else {
+        } else if (filtros.estado === 'activa' || filtros.estado === 'recuperada') {
+            // Solo permitimos filtrar por 'activa' o 'recuperada'
             sql += ` AND p.estado = $${paramIndex}`;
             values.push(filtros.estado);
             paramIndex++;
+        } else {
+            // Si intenta pasar 'eliminada', forzamos a que no traiga resultados de eliminadas
+            sql += ` AND p.estado = 'ninguno'`;
         }
 
         if (filtros.busqueda) {
