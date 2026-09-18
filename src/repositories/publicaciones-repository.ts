@@ -1,11 +1,9 @@
 import DbPg from '../database/db-pg.js'
 
 class PublicacionesRepository {
-
-    db = new DbPg()
+    db = new DbPg();
 
     getById = async (id: string) => {
-
         const sql = `
         SELECT
             p.*,
@@ -24,21 +22,12 @@ class PublicacionesRepository {
             ON c.id = p.categoria_id
         LEFT JOIN instituciones i
             ON i.id = p.institucion_id
-        WHERE p.id = $1
-    `
-
-        const result =
-            await this.db.queryOne(sql, [id])
-
-        return result
-    }
+        WHERE p.id = $1 AND p.estado != 'eliminada'
+    `;
+        return await this.db.queryOne(sql, [id]);
+    };
 
     getRecent = async () => {
-        console.log('EJECUTANDO: getRecent')
-        console.log('DB HOST:', process.env.DB_HOST)
-        console.log('DB DATABASE:', process.env.DB_DATABASE)
-        console.log('DB USER:', process.env.DB_USER)
-
         const sql = `
             SELECT 
                 p.id, 
@@ -62,42 +51,45 @@ class PublicacionesRepository {
                 ORDER BY es_principal DESC, created_at DESC
                 LIMIT 1
             ) a ON true
+            WHERE p.estado = 'activa'
             ORDER BY p.fecha_evento DESC 
             LIMIT 15
-        `
-
-        const result =
-            await this.db.queryAll(sql)
-
-        console.log('RESULTADO QUERY RECIENTES:', result)
-
-        return result
-    }
-
-    delete = async (id: string) => {
-
-        const sql = `
-            DELETE FROM publicaciones
-            WHERE id = $1
-            RETURNING id
         `;
+        return await this.db.queryAll(sql);
+    };
 
+    // Soft delete: Cambia el estado a 'eliminada'
+    delete = async (id: string) => {
+        const sql = `
+            UPDATE publicaciones
+            SET estado = 'eliminada', updated_at = NOW()
+            WHERE id = $1
+            RETURNING id, estado
+        `;
         return await this.db.queryOne(sql, [id]);
+    };
 
-    }
+    // Actualiza únicamente el estado
+    updateEstado = async (id: string, estado: string) => {
+        const sql = `
+            UPDATE publicaciones
+            SET estado = $1, updated_at = NOW()
+            WHERE id = $2
+            RETURNING *
+        `;
+        return await this.db.queryOne(sql, [estado, id]);
+    };
 
     search = async (filtros: {
         busqueda?: string;
         categoria_id?: string;
         institucion_id?: string;
         lugar_institucion?: string;
-        fecha_desde?: string; // 👈 Cambiado
-        fecha_hasta?: string;    // 👈 Cambiado
-        tipo?: string; // perdido o encontrado
+        fecha_desde?: string;
+        fecha_hasta?: string;
+        tipo?: string;
+        estado?: string;
     }) => {
-        console.log('EJECUTANDO: search en PublicacionesRepository con filtros:', filtros);
-
-        // 1. La base de la query con los mismos JOINs que usás en getRecent
         let sql = `
         SELECT 
             p.id, 
@@ -122,13 +114,21 @@ class PublicacionesRepository {
             ORDER BY es_principal DESC, created_at DESC
             LIMIT 1
         ) a ON true
-        WHERE 1=1
+        WHERE p.estado != 'eliminada'
     `;
 
         const values: any[] = [];
         let paramIndex = 1;
 
-        // 2. Agregamos los filtros dinámicamente si vienen informados
+        // Si no filtran explícitamente por estado, mostramos solo las activas
+        if (!filtros.estado) {
+            sql += ` AND p.estado = 'activa'`;
+        } else {
+            sql += ` AND p.estado = $${paramIndex}`;
+            values.push(filtros.estado);
+            paramIndex++;
+        }
+
         if (filtros.busqueda) {
             const palabrasClave = filtros.busqueda
                 .trim()
@@ -140,7 +140,6 @@ class PublicacionesRepository {
             to_tsvector('spanish', p.nombre || ' ' || COALESCE(p.descripcion, '')) 
             @@ to_tsquery('spanish', $${paramIndex})
         )`;
-
             values.push(palabrasClave);
             paramIndex++;
         }
@@ -150,7 +149,6 @@ class PublicacionesRepository {
             values.push(filtros.categoria_id);
             paramIndex++;
         }
-
 
         if (filtros.institucion_id) {
             sql += ` AND p.institucion_id = $${paramIndex}`;
@@ -170,31 +168,21 @@ class PublicacionesRepository {
             paramIndex++;
         }
 
-        // 🔥 NUEVO RANGO DE FECHAS DINÁMICO
-        // Si viene fecha_inicio: la fecha_evento debe ser mayor o igual (>=)
         if (filtros.fecha_desde) {
             sql += ` AND p.fecha_evento::date >= $${paramIndex}::date`;
             values.push(filtros.fecha_desde);
             paramIndex++;
         }
 
-        // Si viene fecha_fin: la fecha_evento debe ser menor o igual (<=)
         if (filtros.fecha_hasta) {
             sql += ` AND p.fecha_evento::date <= $${paramIndex}::date`;
             values.push(filtros.fecha_hasta);
             paramIndex++;
         }
 
-        // 3. Ordenamos por las más nuevas del evento
         sql += ` ORDER BY p.fecha_evento DESC`;
-
-        console.log(sql);
-        console.log(values);
-
-        // 4. Ejecutamos usando tu helper db
-        const result = await this.db.queryAll(sql, values);
-        return result;
-    }
+        return await this.db.queryAll(sql, values);
+    };
 
     create = async (p: {
         usuario_id: string;
@@ -207,29 +195,19 @@ class PublicacionesRepository {
         lugar_institucion: string | null;
         estado: string;
     }) => {
-
         const sql = `
         INSERT INTO publicaciones
         (
-            usuario_id,
-            categoria_id,
-            institucion_id,
-            nombre,
-            descripcion,
-            fecha_evento,
-            tipo,
-            estado,
-            lugar_institucion,
-            created_at,
-            updated_at
+            usuario_id, categoria_id, institucion_id, nombre,
+            descripcion, fecha_evento, tipo, estado,
+            lugar_institucion, created_at, updated_at
         )
         VALUES
         (
-            $1,$2,$3,$4,$5,$6,$7,$8, $9, NOW(), NOW()
+            $1,$2,$3,$4,$5,$6,$7,$8,$9, NOW(), NOW()
         )
         RETURNING *
     `;
-
         return await this.db.queryOne(sql, [
             p.usuario_id,
             p.categoria_id,
@@ -241,10 +219,9 @@ class PublicacionesRepository {
             p.estado,
             p.lugar_institucion
         ]);
-    }
+    };
 
     getByUsuarioId = async (usuarioId: string) => {
-
         const sql = `
         SELECT
             p.id,
@@ -254,43 +231,27 @@ class PublicacionesRepository {
             p.tipo,
             p.estado,
             p.lugar_institucion,
-
             c.nombre AS categoria_nombre,
-
             i.nombre AS institucion_nombre,
             i.direccion AS institucion_direccion,
-
             a.url AS foto_principal_url,
             a.mime_type AS foto_principal_mime_type
-
         FROM publicaciones p
-
-        LEFT JOIN categorias c
-            ON c.id = p.categoria_id
-
-        LEFT JOIN instituciones i
-            ON i.id = p.institucion_id
-
+        LEFT JOIN categorias c ON c.id = p.categoria_id
+        LEFT JOIN instituciones i ON i.id = p.institucion_id
         LEFT JOIN LATERAL (
-            SELECT
-                url,
-                mime_type
+            SELECT url, mime_type
             FROM archivos
             WHERE publicacion_id = p.id
             ORDER BY es_principal DESC, created_at DESC
             LIMIT 1
         ) a ON true
-
-        WHERE p.usuario_id = $1
-
+        WHERE p.usuario_id = $1 AND p.estado != 'eliminada'
         ORDER BY p.created_at DESC
     `;
-
         return await this.db.queryAll(sql, [usuarioId]);
+    };
 
-    }
-
-    // Editar una publicación existente
     update = async (id: string, p: {
         categoria_id: string;
         institucion_id: string | null;
@@ -313,10 +274,9 @@ class PublicacionesRepository {
                 estado = $7,
                 lugar_institucion = $8,
                 updated_at = NOW()
-            WHERE id = $9
+            WHERE id = $9 AND estado != 'eliminada'
             RETURNING *
         `;
-
         return await this.db.queryOne(sql, [
             p.categoria_id,
             p.institucion_id,
@@ -329,7 +289,6 @@ class PublicacionesRepository {
             id
         ]);
     };
-
 }
 
-export default new PublicacionesRepository()
+export default new PublicacionesRepository();
