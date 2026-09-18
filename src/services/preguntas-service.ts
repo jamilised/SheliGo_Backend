@@ -160,11 +160,37 @@ class PreguntasService {
             );
         }
 
-        return await this.repository.createRespuesta(
-            preguntaId,
-            usuarioId,
-            contenido
-        );
+        const respuesta =
+            await this.repository.createRespuesta(
+                preguntaId,
+                usuarioId,
+                contenido
+            );
+
+        if (pregunta.usuario_id !== usuarioId) {
+
+            await this.notificacionesService.crearNotificacion({
+
+                usuario_id:
+                    pregunta.usuario_id,
+
+                publicacion_id:
+                    pregunta.publicacion_id,
+
+                tipo:
+                    "respuesta_pregunta",
+
+                titulo:
+                    "Nueva respuesta",
+
+                contenido:
+                    "El dueño de la publicación respondió tu pregunta."
+
+            });
+
+        }
+
+        return respuesta;
 
     }
 
