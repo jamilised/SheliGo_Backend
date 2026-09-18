@@ -2,7 +2,7 @@ import { Router } from 'express';
 import publicacionesController from '../controllers/publicaciones-controller.js';
 import { authMiddleware } from '../middlewares/auth-middleware.js';
 import { validateQuery, validateBody } from '../middlewares/validation-middleware.js';
-import { searchPublicacionSchema, createPublicacionSchema, updatePublicacionSchema  } from '../validations/publicacion-schema.js';
+import { searchPublicacionSchema, createPublicacionSchema, updatePublicacionSchema } from '../validations/publicacion-schema.js';
 import upload from "../middlewares/upload-middleware.js";
 
 const router = Router();
@@ -16,10 +16,11 @@ router.get('/:id/preguntas', authMiddleware, publicacionesController.getPregunta
 router.post('/:id/preguntas', authMiddleware, publicacionesController.createPregunta);
 router.post("/preguntas/:preguntaId/respuesta", authMiddleware, publicacionesController.createRespuesta);
 
+router.patch("/:id/recuperar", authMiddleware, publicacionesController.marcarRecuperada);
+
 router.delete("/:id", authMiddleware, publicacionesController.remove);
 router.put("/:id", authMiddleware, upload.array("imagenes", 5), validateBody(updatePublicacionSchema), publicacionesController.update);
 
-router.post("/", authMiddleware, upload.array("imagenes",5), validateBody(createPublicacionSchema), publicacionesController.create);
+router.post("/", authMiddleware, upload.array("imagenes", 5), validateBody(createPublicacionSchema), publicacionesController.create);
 
 export default router;
-
