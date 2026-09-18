@@ -6,39 +6,43 @@ import AppError from '../errors/app-error.js';
 
 class AuthService {
     private usuariosRepo = UsuariosRepository;
+login = async (email: string, password: string) => {
+    console.log('⚡ SERVICIO AUTH: Iniciando login para:', email);
 
-    login = async (email: string, password: string) => {
-        console.log('⚡ SERVICIO AUTH: Iniciando login para:', email);
+    const usuario = await this.usuariosRepo.getByEmail(
+        email.toLowerCase().trim()
+    );
+    if (!usuario) {
+        throw new AppError('Credenciales inválidas', 401);
+    }
 
-        const usuario = await this.usuariosRepo.getByEmail(
-            email.toLowerCase().trim()
-        );
-        if (!usuario) {
-            throw new AppError('Credenciales inválidas', 401);
+    const passwordValida = await bcrypt.compare(password, usuario.password_hash);
+    if (!passwordValida) {
+        throw new AppError('Credenciales inválidas', 401);
+    }
+
+    // OBTENER LAS INSTITUCIONES ASOCIADAS AL USUARIO
+    const instituciones = (await this.usuariosRepo.getInstitucionesByUsuarioId(usuario.id)) || [];
+
+    const token = jwt.sign(
+        { userId: usuario.id },
+        process.env.JWT_SECRET!,
+        { expiresIn: '1d' }
+    );
+
+    // INCLUIR 'instituciones' EN EL OBJETO DE RESPUESTA
+    return {
+        token,
+        usuario: {
+            id: usuario.id,
+            nombre: usuario.nombre,
+            apellido: usuario.apellido,
+            email: usuario.email,
+            foto: usuario.foto,
+            instituciones 
         }
-
-        const passwordValida = await bcrypt.compare(password, usuario.password_hash);
-        if (!passwordValida) {
-            throw new AppError('Credenciales inválidas', 401);
-        }
-
-        const token = jwt.sign(
-            { userId: usuario.id },
-            process.env.JWT_SECRET!,
-            { expiresIn: '1d' }
-        );
-
-        return {
-            token,
-            usuario: {
-                id: usuario.id,
-                nombre: usuario.nombre,
-                apellido: usuario.apellido,
-                email: usuario.email,
-                foto: usuario.foto
-            }
-        };
     };
+};
 
     // auth-service.ts
 

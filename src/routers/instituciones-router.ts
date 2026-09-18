@@ -8,9 +8,9 @@ const router = Router();
 router.get('/selector', institucionesController.getParaSelector);
 
 // GET /api/instituciones/recientes
-router.get('/recientes', authMiddleware, institucionesController.getRecientes);
+router.get('/recientes', institucionesController.getRecientes);
 
 // GET /api/instituciones (Trae todas con datos completos)
-router.get('/', authMiddleware, institucionesController.getAll);
+router.get('/', institucionesController.getAll);
 
 export default router;
