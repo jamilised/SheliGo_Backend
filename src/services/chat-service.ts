@@ -2,10 +2,12 @@ import ChatRepository from '../repositories/chat-repository.js';
 import UsuariosRepository from '../repositories/usuarios-repository.js';
 import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
+import NotificacionesService from '../services/notificaciones-service.js';
 
 class ChatService {
     private chatRepo = ChatRepository;
     private usuariosRepo = UsuariosRepository;
+    private notificacionesService = NotificacionesService;
 
     // Función auxiliar para validar sintaxis de UUID (Lógica pura, se queda en el Service)
     private esUUIDValido = (uuid: string): boolean => {
@@ -80,9 +82,9 @@ class ChatService {
 
     // Guardar un mensaje nuevo enviado por el usuario
     guardarMensaje = async (
-        salaId: string, 
-        emisorId: string, 
-        contenido?: string, 
+        salaId: string,
+        emisorId: string,
+        contenido?: string,
         archivoFoto?: Express.Multer.File
     ) => {
         console.log(`⚡ SERVICIO CHAT: Guardando nuevo mensaje en sala ${salaId}`);
@@ -124,7 +126,46 @@ class ChatService {
             contenidoFinal = fotoPath; // Se guarda como: chats/chat-1786...jpg
         }
 
-        const mensajeCreado = await this.chatRepo.enviarMensaje(salaId, emisorId, contenidoFinal);
+        const mensajeCreado = await this.chatRepo.enviarMensaje(
+            salaId,
+            emisorId,
+            contenidoFinal
+        );
+
+        const participantes =
+            await this.chatRepo.getParticipantesSala(
+                salaId
+            ) ?? [];
+
+        console.log("👥 PARTICIPANTES:", participantes);
+        console.log("👤 EMISOR:", emisorId);
+
+        for (const participante of participantes) {
+
+            if (participante.usuario_id === emisorId) {
+                continue;
+            }
+
+            await this.notificacionesService
+                .crearNotificacion({
+
+                    usuario_id:
+                        participante.usuario_id,
+
+                    publicacion_id:
+                        null,
+
+                    tipo:
+                        "nuevo_mensaje",
+
+                    titulo:
+                        "Nuevo mensaje",
+
+                    contenido:
+                        "Recibiste un nuevo mensaje."
+
+                });
+        }
 
         // Si el contenido subido es una foto, formateamos o adjuntamos la URL completa para el cliente
         if (tieneFoto) {
