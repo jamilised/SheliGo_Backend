@@ -1,7 +1,7 @@
 export type EstadoPublicacion =
   | 'activa'
   | 'recuperada'
-  | 'cerrada'
+  | 'eliminada'
 
 export type TipoPublicacion =
   | 'perdido'
