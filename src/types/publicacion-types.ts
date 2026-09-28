@@ -1,11 +1,7 @@
 export type EstadoPublicacion =
   | 'activa'
-  | 'pausada'
-  | 'en_revision'
-  | 'match_detectado'
-  | 'reclamada'
   | 'recuperada'
-  | 'cerrada'
+  | 'eliminada'
 
 export type TipoPublicacion =
   | 'perdido'

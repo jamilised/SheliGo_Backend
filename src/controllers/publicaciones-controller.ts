@@ -273,6 +273,27 @@ const getMisPublicaciones = async (
     }
 };
 
+const marcarRecuperada = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const id = req.params.id as string;
+        const usuarioId = res.locals.userIdLogged;
+
+        const publicacion = await publicacionesService.marcarComoRecuperada(id, usuarioId);
+
+        return res.status(200).json({
+            status: "success",
+            message: "La publicación ha sido marcada como recuperada",
+            data: { publicacion }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export default {
     getRecientes,
     getMisPublicaciones,
@@ -284,5 +305,6 @@ export default {
     createRespuesta,
     create,
     remove,
-    update
+    update,
+    marcarRecuperada
 };
