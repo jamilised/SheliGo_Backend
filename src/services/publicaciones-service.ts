@@ -5,8 +5,16 @@ import { StorageHelper } from '../helpers/storage-helper.js';
 import ArchivosRepository from '../repositories/archivos-repository.js';
 import { DateHelper } from '../helpers/date-helper.js';
 
+import PreguntasRepository
+    from '../repositories/preguntas-repository.js';
+import NotificacionesService
+    from '../services/notificaciones-service.js';
+
 class PublicacionesService {
     private archivosRepository = ArchivosRepository;
+    private preguntasRepository = PreguntasRepository;
+    private notificacionesService = NotificacionesService;
+
     repository = PublicacionesRepository;
 
     getDetalle = async (id: string) => {
@@ -195,6 +203,52 @@ class PublicacionesService {
 
         if (!tienePrincipal && todosLosArchivos.length > 0) {
             await this.archivosRepository.marcarComoPrincipal(todosLosArchivos[0].id);
+        }
+
+        const huboCambiosEnFotos =
+            (Array.isArray(fotosEliminar) && fotosEliminar.length > 0) ||
+            (files && files.length > 0);
+
+        const cambioContenido =
+            publicacionOriginal.nombre !== publicacionActualizada.nombre ||
+            publicacionOriginal.descripcion !== publicacionActualizada.descripcion ||
+            publicacionOriginal.fecha_evento?.toString() !== publicacionActualizada.fecha_evento?.toString() ||
+            publicacionOriginal.categoria_id !== publicacionActualizada.categoria_id ||
+            publicacionOriginal.institucion_id !== publicacionActualizada.institucion_id ||
+            publicacionOriginal.lugar_institucion !== publicacionActualizada.lugar_institucion ||
+            publicacionOriginal.tipo !== publicacionActualizada.tipo;
+
+        if (cambioContenido || huboCambiosEnFotos) {
+
+            const usuarios =
+                await this.preguntasRepository
+                    .getUsuariosPorPublicacion(
+                        id,
+                        publicacionOriginal.usuario_id
+                    ) ?? [];
+
+            for (const usuario of usuarios) {
+
+                await this.notificacionesService
+                    .crearNotificacion({
+
+                        usuario_id:
+                            usuario.usuario_id,
+
+                        publicacion_id:
+                            id,
+
+                        tipo:
+                            "publicacion_editada",
+
+                        titulo:
+                            "Publicación editada",
+
+                        contenido:
+                            "Una publicación que te interesa fue modificada."
+
+                    });
+            }
         }
 
         return {

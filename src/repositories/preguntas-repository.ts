@@ -78,7 +78,25 @@ class PreguntasRepository {
             usuarioId,
             contenido
         ]);
-    } 
+    }
+
+    getUsuariosPorPublicacion = async (
+        publicacionId: string,
+        usuarioIdPropietario: string
+    ) => {
+
+        const sql = `
+        SELECT DISTINCT usuario_id
+        FROM preguntas
+        WHERE publicacion_id = $1
+          AND usuario_id <> $2
+    `;
+
+        return await this.db.queryAll(sql, [
+            publicacionId,
+            usuarioIdPropietario
+        ]);
+    };
 }
 
 export default new PreguntasRepository(); // 🚀 Instancia directa
