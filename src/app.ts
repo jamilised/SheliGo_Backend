@@ -88,7 +88,7 @@ app.use(
 );
 
 app.use(
-    '/api/notificaciones',
+    '/notificaciones',
     notificacionesRouter
 );
 
