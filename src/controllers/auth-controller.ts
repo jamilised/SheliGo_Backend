@@ -77,17 +77,49 @@ const loginConGoogle = async (req: Request, res: Response, next: NextFunction) =
     }
 };
 
-const asociarInstituciones = async (req: Request, res: Response, next: NextFunction) => {
+const asociarInstituciones = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     try {
-        const userId = (req as any).user.userId; // Obtenido del token JWT mediante authMiddleware
+        // El authMiddleware guarda el ID del usuario acá
+        const userId = res.locals.userIdLogged;
+
+        if (!userId) {
+            return res.status(401).json({
+                status: "error",
+                message: "No se pudo identificar al usuario autenticado."
+            });
+        }
+
         const { instituciones_ids } = req.body;
 
-        const instituciones = await authService.asociarInstitucionesGoogle(userId, instituciones_ids);
+        if (
+            !Array.isArray(instituciones_ids) ||
+            instituciones_ids.length === 0
+        ) {
+            return res.status(400).json({
+                status: "error",
+                message: "Debes seleccionar al menos una institución."
+            });
+        }
+
+        console.log("Usuario autenticado:", userId);
+        console.log("Instituciones recibidas:", instituciones_ids);
+
+        const instituciones =
+            await authService.asociarInstitucionesGoogle(
+                userId,
+                instituciones_ids
+            );
 
         return res.status(200).json({
-            status: 'success',
-            message: 'Instituciones asociadas correctamente',
-            data: { instituciones }
+            status: "success",
+            message: "Instituciones asociadas correctamente",
+            data: {
+                instituciones
+            }
         });
     } catch (error) {
         return next(error);
