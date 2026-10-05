@@ -178,6 +178,13 @@ El servidor iniciará por defecto en:
 http://localhost:3000
 ```
 
+Para compilar y arrancar en producción:
+
+```bash
+npm run build
+npm start
+```
+
 ---
 
 # Endpoints principales
