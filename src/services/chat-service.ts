@@ -22,43 +22,116 @@ class ChatService {
     };
 
     // Obtener o Crear una sala entre el usuario logueado y otro usuario
-    obtenerOCrearSala = async (usuarioLogueadoId: string, otroUsuarioId: string) => {
-        console.log(`⚡ SERVICIO CHAT: Buscando o creando sala entre ${usuarioLogueadoId} y ${otroUsuarioId}`);
+    obtenerOCrearSala = async (
+        usuarioLogueadoId: string,
+        otroUsuarioId: string
+    ) => {
+
+        console.log(
+            `⚡ SERVICIO CHAT: Buscando o creando sala entre ${usuarioLogueadoId} y ${otroUsuarioId}`
+        );
 
         // 🚨 VALIDACIÓN 1: Sintaxis de UUID de ambos usuarios
-        if (!this.esUUIDValido(usuarioLogueadoId) || !this.esUUIDValido(otroUsuarioId)) {
-            throw new AppError('El ID de usuario proporcionado no tiene un formato válido.', 400);
+        if (
+            !this.esUUIDValido(usuarioLogueadoId) ||
+            !this.esUUIDValido(otroUsuarioId)
+        ) {
+            throw new AppError(
+                'El ID de usuario proporcionado no tiene un formato válido.',
+                400
+            );
         }
 
         // 🚨 VALIDACIÓN 2: No se puede crear una sala con uno mismo
         if (usuarioLogueadoId === otroUsuarioId) {
-            throw new AppError('No podés crear una sala de chat con vos mismo.', 400);
+            throw new AppError(
+                'No podés crear una sala de chat con vos mismo.',
+                400
+            );
         }
 
-        // 🚨 VALIDACIÓN 3: Capas respetadas. Usamos el repositorio de usuarios para verificar si existe
-        const otroUsuario = await this.usuariosRepo.getById(otroUsuarioId);
+        // 🚨 VALIDACIÓN 3: Verificar que el otro usuario exista
+        const otroUsuario =
+            await this.usuariosRepo.getById(
+                otroUsuarioId
+            );
+
         if (!otroUsuario) {
-            throw new AppError('El usuario con el que intentás chatear no existe.', 404);
+            throw new AppError(
+                'El usuario con el que intentás chatear no existe.',
+                404
+            );
         }
 
-        // 1. Checkear si ya tienen una sala juntos
-        const salaExistente = await this.chatRepo.buscarSalaCompartida(usuarioLogueadoId, otroUsuarioId);
+        // 1. Buscar si ya existe una sala entre ambos
+        const salaExistente =
+            await this.chatRepo.buscarSalaCompartida(
+                usuarioLogueadoId,
+                otroUsuarioId
+            );
 
+        // Si ya existe, simplemente devolvemos la sala.
+        // NO generamos una nueva notificación.
         if (salaExistente) {
-            console.log(`ℹ️ Ya existe la sala: ${salaExistente.sala_id}`);
-            return { sala_id: salaExistente.sala_id };
+
+            console.log(
+                `ℹ️ Ya existe la sala: ${salaExistente.sala_id}`
+            );
+
+            return {
+                sala_id: salaExistente.sala_id
+            };
         }
 
-        // 2. Si no existe, creamos la sala nueva
-        console.log(`✨ No existe sala común. Creando sala nueva...`);
-        const nuevaSala = await this.chatRepo.crearSala();
-        if (!nuevaSala) throw new AppError('No se pudo crear la sala de chat.', 500);
+        // 2. Crear una nueva sala
+        console.log(
+            `✨ No existe sala común. Creando sala nueva...`
+        );
 
-        // 3. Unimos a los dos participantes a la sala
-        await this.chatRepo.agregarParticipante(nuevaSala.id, usuarioLogueadoId);
-        await this.chatRepo.agregarParticipante(nuevaSala.id, otroUsuarioId);
+        const nuevaSala =
+            await this.chatRepo.crearSala();
 
-        return { sala_id: nuevaSala.id };
+        if (!nuevaSala) {
+            throw new AppError(
+                'No se pudo crear la sala de chat.',
+                500
+            );
+        }
+
+        // 3. Agregar a ambos participantes
+        await this.chatRepo.agregarParticipante(
+            nuevaSala.id,
+            usuarioLogueadoId
+        );
+
+        await this.chatRepo.agregarParticipante(
+            nuevaSala.id,
+            otroUsuarioId
+        );
+
+        // 4. Notificar al usuario que recibió el nuevo contacto
+        await this.notificacionesService.crearNotificacion({
+
+            usuario_id:
+                otroUsuarioId,
+
+            publicacion_id:
+                null,
+
+            tipo:
+                "nueva_conversacion",
+
+            titulo:
+                "Nuevo chat",
+
+            contenido:
+                "Un usuario creó una conversación con vos."
+
+        });
+
+        return {
+            sala_id: nuevaSala.id
+        };
     };
 
     // Obtener el historial de mensajes de una sala y marcarlos como leídos
