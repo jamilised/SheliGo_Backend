@@ -1,19 +1,34 @@
 import type { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
+import AppError from '../errors/app-error.js';
+import NotFoundError from '../errors/not-found-error.js';
 
 export const errorMiddleware = (
-  err: any, 
+  err: unknown,
   req: Request, 
   res: Response, 
-  next: NextFunction
+  _next: NextFunction
 ) => {
-  const statusCode = err.statusCode || 500;
-  let responseStatusCode = statusCode;
-  let message = err.message || 'Ocurrió un error interno en el servidor';
+  const isMulterError = err instanceof multer.MulterError;
+  const isControlledError = err instanceof AppError || err instanceof NotFoundError;
+  const rawStatusCode = isMulterError
+    ? 400
+    : isControlledError
+      ? err.statusCode
+      : 500;
+  const responseStatusCode = Number.isInteger(rawStatusCode)
+    && rawStatusCode >= 400
+    && rawStatusCode < 500
+      ? rawStatusCode
+      : 500;
 
-  if (err instanceof multer.MulterError) {
-    responseStatusCode = 400;
+  let message = responseStatusCode === 500
+    ? 'Ha ocurrido un error interno en el servidor.'
+    : err instanceof Error
+      ? err.message
+      : 'La solicitud no es válida.';
 
+  if (isMulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       message = 'El archivo supera el tamaño máximo permitido de 8 MB.';
     } else if (
@@ -26,10 +41,13 @@ export const errorMiddleware = (
     }
   }
 
-  console.error(`[ERROR] [${req.method}] ${req.url} - ${message}`);
-  
   if (responseStatusCode === 500) {
-    console.error(err.stack);
+    console.error(
+      `[ERROR] [${req.method}] ${req.originalUrl} - Error interno:`,
+      err
+    );
+  } else {
+    console.error(`[ERROR] [${req.method}] ${req.originalUrl} - ${message}`);
   }
 
   res.status(responseStatusCode).json({
