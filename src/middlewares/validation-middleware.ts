@@ -24,10 +24,9 @@ export const validateBody = (schema: z.ZodTypeAny) => {
  * Middleware genérico para validar los Query Params de una petición
  */
 // Cambiá el tipo del parámetro schema a z.ZodTypeAny 🚀
-export const validateQuery = (schema: z.ZodTypeAny) => {
+export const validateQuery = <T extends z.ZodTypeAny>(schema: T) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            // 1. Validamos los query params originales
             const validacion = await schema.safeParseAsync(req.query);
             
             if (!validacion.success) {
@@ -37,12 +36,26 @@ export const validateQuery = (schema: z.ZodTypeAny) => {
                 );
             }
             
-            // 2. Limpiamos y reasignamos de forma segura
-            Object.keys(req.query).forEach(key => delete req.query[key]);
-            Object.assign(req.query, validacion.data);
+            res.locals.validatedQuery = validacion.data;
             
             return next();
         } catch (error) {
+            return next(error);
+        }
+    };
+};
+
+export const validateParams = (schema: z.ZodTypeAny) => {
+    return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+        try {
+            const parsedParams = await schema.parseAsync(req.params);
+            Object.assign(req.params, parsedParams);
+            return next();
+        } catch (error) {
+            if (error instanceof ZodError) {
+                const firstError = error.issues[0]?.message || 'Parámetros de ruta inválidos';
+                return next(new AppError(firstError, 400));
+            }
             return next(error);
         }
     };

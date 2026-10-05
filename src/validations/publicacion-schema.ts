@@ -18,10 +18,10 @@ const fechaValidacion = z.string()
     .optional();
 
 export const searchPublicacionSchema = z.object({
-    busqueda: z.string().optional(),
+    busqueda: z.string().trim().max(100, 'La búsqueda no puede superar 100 caracteres').optional(),
     categoria_id: z.string().uuid('ID de categoría inválido').optional(),
     institucion_id: z.string().uuid('ID de institución inválido').optional(),
-    lugar_institucion: z.string().optional(),
+    lugar_institucion: z.string().trim().max(100, 'El lugar no puede superar 100 caracteres').optional(),
     fecha_desde: fechaValidacion,
     fecha_hasta: fechaValidacion,
     tipo: z.enum(['perdido', 'encontrado'], {
