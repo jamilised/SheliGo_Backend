@@ -136,6 +136,19 @@ class PublicacionesService {
             throw new AppError('No tienes permisos para editar esta publicación.', 403);
         }
 
+        const fotosEliminar: string[] = body.fotosAEliminar ?? [];
+        const archivosSolicitados = fotosEliminar.length > 0
+            ? await this.archivosRepository.getByIdsForPublication(
+                fotosEliminar,
+                id,
+                usuarioId
+            )
+            : [];
+
+        if (archivosSolicitados.length !== new Set(fotosEliminar).size) {
+            throw new NotFoundError('Uno o más archivos no pertenecen a esta publicación.');
+        }
+
         const publicacionActualizada = await this.repository.update(id, {
             nombre: body.nombre !== undefined ? body.nombre : publicacionOriginal.nombre,
             descripcion: body.descripcion !== undefined ? body.descripcion : publicacionOriginal.descripcion,
@@ -151,17 +164,47 @@ class PublicacionesService {
             throw new AppError('No se pudo actualizar la publicación.', 500);
         }
 
-        let fotosEliminar = body.fotosAEliminar;
-        if (fotosEliminar) {
-            if (typeof fotosEliminar === 'string') {
-                try { fotosEliminar = JSON.parse(fotosEliminar); }
-                catch { fotosEliminar = [fotosEliminar]; }
+        for (const archivoSolicitado of archivosSolicitados) {
+            const archivoEliminado = await this.archivosRepository.deleteById(
+                archivoSolicitado.id,
+                id,
+                usuarioId
+            );
+
+            if (!archivoEliminado) {
+                throw new AppError(
+                    'No se pudo confirmar la eliminación del archivo.',
+                    409
+                );
             }
 
-            if (Array.isArray(fotosEliminar) && fotosEliminar.length > 0) {
-                for (const fotoId of fotosEliminar) {
-                    await this.archivosRepository.deleteById(fotoId);
+            try {
+                await StorageHelper.eliminarObjeto(archivoEliminado.url);
+            } catch (error) {
+                try {
+                    const restaurado = await this.archivosRepository.restore(archivoEliminado);
+                    if (!restaurado) {
+                        throw new Error('No se pudo restaurar el registro del archivo.');
+                    }
+                } catch (restoreError) {
+                    console.error(
+                        `No se pudo completar ni revertir la eliminación del archivo ${archivoEliminado.id}.`,
+                        restoreError
+                    );
+                    throw new AppError(
+                        'No se pudo eliminar el archivo del almacenamiento ni restaurar su registro.',
+                        500
+                    );
                 }
+
+                console.error(
+                    `No se pudo eliminar el objeto ${archivoEliminado.url} de Supabase Storage.`,
+                    error
+                );
+                throw new AppError(
+                    'No se pudo eliminar la imagen del almacenamiento. El registro fue restaurado.',
+                    502
+                );
             }
         }
 

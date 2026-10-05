@@ -1,13 +1,57 @@
 import sharp from 'sharp';
+import { createClient } from '@supabase/supabase-js';
 
 export class StorageHelper {
-    private static readonly SUPABASE_STORAGE_URL = 'https://evovbsxgvzljkbcheipp.supabase.co/storage/v1/object/public/avatars/';
+    private static storageClient: ReturnType<typeof createClient> | null = null;
+
+    private static getSupabaseUrl(): string {
+        const supabaseUrl = process.env.SUPABASE_URL;
+        if (!supabaseUrl) {
+            throw new Error('Falta configurar SUPABASE_URL.');
+        }
+
+        return supabaseUrl.replace(/\/+$/, '');
+    }
+
+    private static getBucketName(): string {
+        return process.env.SUPABASE_BUCKET || 'avatars';
+    }
+
+    private static getStorageClient() {
+        if (!this.storageClient) {
+            const supabaseUrl = this.getSupabaseUrl();
+            const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+            if (!serviceRoleKey) {
+                throw new Error('Falta configurar el acceso de servidor a Supabase Storage.');
+            }
+
+            this.storageClient = createClient(supabaseUrl, serviceRoleKey, {
+                auth: {
+                    autoRefreshToken: false,
+                    persistSession: false
+                }
+            });
+        }
+
+        return this.storageClient;
+    }
+    static eliminarObjeto = async (relativePath: string): Promise<void> => {
+        const { error } = await this.getStorageClient()
+            .storage
+            .from(this.getBucketName())
+            .remove([relativePath]);
+
+        if (error) {
+            throw error;
+        }
+    };
 
     static buildUrl(relativePath: string | null | undefined): string {
         if (!relativePath) {
             return 'https://www.publicdomainpictures.net/pictures/200000/velka/placeholder-bege.jpg';
         }
-        return `${this.SUPABASE_STORAGE_URL}${relativePath}`;
+        return `${this.getSupabaseUrl()}/storage/v1/object/public/${this.getBucketName()}/${relativePath}`;
     }
 
     static optimizarYSubir = async (
@@ -68,7 +112,7 @@ export class StorageHelper {
                 `${folder}/${fileName}`;
 
             const storageUrl =
-                `https://evovbsxgvzljkbcheipp.supabase.co/storage/v1/object/avatars/${fotoFinalPath}`;
+                `${this.getSupabaseUrl()}/storage/v1/object/${this.getBucketName()}/${fotoFinalPath}`;
 
             const supabaseToken =
                 process.env.SUPABASE_SERVICE_ROLE_KEY || "";

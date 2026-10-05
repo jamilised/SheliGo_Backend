@@ -99,7 +99,31 @@ export const updatePublicacionSchema = createPublicacionSchema
         }).optional(),
 
         fotosAEliminar: z.union([
-            z.string(),
-            z.array(z.string())
+            z.array(z.string().uuid()).max(5),
+            z.string().transform((value, context) => {
+                let parsedValue: unknown;
+
+                try {
+                    parsedValue = JSON.parse(value);
+                } catch {
+                    parsedValue = value;
+                }
+
+                const ids = Array.isArray(parsedValue) ? parsedValue : [parsedValue];
+                const result = z.array(z.string().uuid()).max(5).safeParse(ids);
+
+                if (!result.success) {
+                    for (const issue of result.error.issues) {
+                        context.addIssue({
+                            code: "custom",
+                            message: issue.message,
+                            path: issue.path
+                        });
+                    }
+                    return z.NEVER;
+                }
+
+                return result.data;
+            })
         ]).optional()
     });
