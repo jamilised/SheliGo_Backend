@@ -1,34 +1,34 @@
 import { Pool } from 'pg'
 import config from '../configs/db-config.js'
 
-export default class DbPg {
+export const pool = new Pool(config)
 
-    DBPool: Pool | null
+pool.on('error', (error) => {
+    console.error('Error inesperado en una conexión inactiva de PostgreSQL:', error)
+})
 
-    constructor() {
-        this.DBPool = null
-    }
-
-    getDBPool = (): Pool => {
-        if (this.DBPool == null) {
-            this.DBPool = new Pool(config)
-        }
-        return this.DBPool
-    }
+class DbPg {
+    getDBPool = (): Pool => pool
 
     queryAll = async (sql: string, values: any[] | null = null) => {
         const resultPg = values
-            ? await this.getDBPool().query(sql, values)
-            : await this.getDBPool().query(sql)
+            ? await pool.query(sql, values)
+            : await pool.query(sql)
 
         return resultPg.rows
     }
 
     queryOne = async (sql: string, values: any[] | null = null) => {
         const resultPg = values
-            ? await this.getDBPool().query(sql, values)
-            : await this.getDBPool().query(sql)
+            ? await pool.query(sql, values)
+            : await pool.query(sql)
 
         return resultPg.rows[0] ?? null
     }
+
+    close = async (): Promise<void> => {
+        await pool.end()
+    }
 }
+
+export default new DbPg()

@@ -1,8 +1,8 @@
-import DbPg from '../database/db-pg.js';
+import dbPg from '../database/db-pg.js';
 import { SqlSearchHelper } from '../helpers/sql-search-helper.js';
 
 class ChatRepository {
-    db = new DbPg();
+    db = dbPg;
 
     // 1. Busca si ya existe una sala común entre dos usuarios (para no duplicar chats de a dos)
     buscarSalaCompartida = async (usuarioA: string, usuarioB: string) => {

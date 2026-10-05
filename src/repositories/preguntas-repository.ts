@@ -1,7 +1,7 @@
-import DbPg from '../database/db-pg.js'
+import dbPg from '../database/db-pg.js'
 
 class PreguntasRepository {
-    db = new DbPg()
+    db = dbPg
 
     getByPublicacionId = async (publicacionId: string) => {
         const sql = `

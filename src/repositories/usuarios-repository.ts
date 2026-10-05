@@ -1,9 +1,9 @@
-import DbPg from '../database/db-pg.js'
+import dbPg from '../database/db-pg.js'
 import Usuario from '../entities/usuario.js';
 
 class UsuariosRepository {
 
-    db = new DbPg()
+    db = dbPg
 
     // Busca un usuario por su ID
     getById = async (id: string) => {

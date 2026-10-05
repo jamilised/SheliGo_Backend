@@ -1,8 +1,8 @@
-import DbPg from '../database/db-pg.js';
+import dbPg from '../database/db-pg.js';
 
 class InstitucionesRepository {
 
-    db = new DbPg();
+    db = dbPg;
 
     // Trae id y nombre ordenados alfabéticamente para selects/desplegables
     getParaSelector = async () => {
