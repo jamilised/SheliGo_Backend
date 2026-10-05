@@ -80,11 +80,10 @@ const loginConGoogle = async (req: Request, res: Response, next: NextFunction) =
 
 const asociarInstituciones = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // 🔴 Usamos res.locals.userIdLogged como lo guardó el authMiddleware
-        const userId = res.locals.userIdLogged; 
+        const userId: unknown = res.locals.userIdLogged;
         const { instituciones_ids } = req.body;
 
-        if (!userId) {
+        if (typeof userId !== 'string' || !userId) {
             return next(new AppError('Usuario no autenticado', 401));
         }
 

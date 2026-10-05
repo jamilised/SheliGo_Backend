@@ -16,6 +16,28 @@ export const loginSchema = z.object({
         .min(1, 'La contraseña es obligatoria')
 });
 
+export const completeInstitutionsSchema = z.object({
+    instituciones_ids: z.preprocess(
+        (value) => {
+            if (typeof value !== 'string') {
+                return value;
+            }
+
+            try {
+                return JSON.parse(value);
+            } catch {
+                return value;
+            }
+        },
+        z.array(
+            z.string().uuid('UUID de institución inválido'),
+            { message: 'Debes enviar un arreglo de IDs de instituciones' }
+        )
+            .min(1, 'Debes seleccionar al menos una institución')
+            .max(50, 'No puedes seleccionar más de 50 instituciones')
+    )
+});
+
 export const registerSchema = z.object({
     nombre: z.string()
         .min(2, 'El nombre debe tener entre 2 y 50 caracteres')
