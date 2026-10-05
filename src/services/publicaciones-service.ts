@@ -101,18 +101,62 @@ class PublicacionesService {
     };
 
     // Soft delete: solo cambia el estado en BD
-    remove = async (publicacionId: string, usuarioId: string) => {
-        const publicacion = await this.repository.getById(publicacionId);
+    remove = async (
+        publicacionId: string,
+        usuarioId: string
+    ) => {
+
+        const publicacion =
+            await this.repository.getById(
+                publicacionId
+            );
 
         if (!publicacion) {
-            throw new NotFoundError("Publicación no encontrada");
+            throw new NotFoundError(
+                "Publicación no encontrada"
+            );
         }
 
         if (publicacion.usuario_id !== usuarioId) {
-            throw new AppError("No tienes permisos para eliminar esta publicación", 403);
+            throw new AppError(
+                "No tienes permisos para eliminar esta publicación",
+                403
+            );
         }
 
-        await this.repository.delete(publicacionId);
+        const usuarios =
+            await this.preguntasRepository
+                .getUsuariosPorPublicacion(
+                    publicacionId,
+                    publicacion.usuario_id
+                ) ?? [];
+
+        await this.repository.delete(
+            publicacionId
+        );
+
+        for (const usuario of usuarios) {
+
+            await this.notificacionesService
+                .crearNotificacion({
+
+                    usuario_id:
+                        usuario.usuario_id,
+
+                    publicacion_id:
+                        publicacionId,
+
+                    tipo:
+                        "publicacion_eliminada",
+
+                    titulo:
+                        "Publicación eliminada",
+
+                    contenido:
+                        "Una publicación que te interesaba fue eliminada."
+
+                });
+        }
     };
 
     // Transición a estado 'recuperada'
@@ -216,7 +260,8 @@ class PublicacionesService {
             publicacionOriginal.categoria_id !== publicacionActualizada.categoria_id ||
             publicacionOriginal.institucion_id !== publicacionActualizada.institucion_id ||
             publicacionOriginal.lugar_institucion !== publicacionActualizada.lugar_institucion ||
-            publicacionOriginal.tipo !== publicacionActualizada.tipo;
+            publicacionOriginal.tipo !== publicacionActualizada.tipo ||
+            publicacionOriginal.estado !== publicacionActualizada.estado;
 
         if (cambioContenido || huboCambiosEnFotos) {
 
