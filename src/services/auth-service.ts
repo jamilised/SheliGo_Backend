@@ -47,6 +47,10 @@ class AuthService {
 
         console.log('⚡ SERVICIO AUTH: Iniciando proceso de registro para:', email);
 
+        if (!instituciones_ids || (Array.isArray(instituciones_ids) && instituciones_ids.length === 0)) {
+        throw new AppError('Debes seleccionar al menos una institución para registrarte.', 400);
+    }
+    
         // --- 1. VALIDACIÓN DE BASE DE DATOS ---
         const usuarioExistente = await this.usuariosRepo.getByEmail(email);
         if (usuarioExistente) {

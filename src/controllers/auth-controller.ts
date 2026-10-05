@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import authService from '../services/auth-service.js';
 import jwt from 'jsonwebtoken';
+import AppError from '../errors/app-error.js';
 
 const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -79,8 +80,13 @@ const loginConGoogle = async (req: Request, res: Response, next: NextFunction) =
 
 const asociarInstituciones = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = (req as any).user.userId; // Obtenido del token JWT mediante authMiddleware
+        // 🔴 Usamos res.locals.userIdLogged como lo guardó el authMiddleware
+        const userId = res.locals.userIdLogged; 
         const { instituciones_ids } = req.body;
+
+        if (!userId) {
+            return next(new AppError('Usuario no autenticado', 401));
+        }
 
         const instituciones = await authService.asociarInstitucionesGoogle(userId, instituciones_ids);
 

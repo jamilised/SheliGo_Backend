@@ -48,19 +48,24 @@ export const registerSchema = z.object({
     confirmPassword: z.string()
         .min(1, 'Debe confirmar su contraseña'),
 
-    // Procesa array, JSON string o UUID único enviado desde FormData
-    instituciones_ids: z.union([
-        z.array(z.string().uuid('UUID de institución inválido')),
-        z.string().transform((val, ctx) => {
-            try {
-                const parsed = JSON.parse(val);
-                if (Array.isArray(parsed)) return parsed;
-                return [val];
-            } catch {
-                return [val];
+    instituciones_ids: z.preprocess(
+        (val) => {
+            if (!val) return undefined;
+            if (Array.isArray(val)) return val;
+            if (typeof val === 'string') {
+                try {
+                    const parsed = JSON.parse(val);
+                    return Array.isArray(parsed) ? parsed : [val];
+                } catch {
+                    return [val];
+                }
             }
-        })
-    ]).optional()
+            return val;
+        },
+        z.array(z.string().uuid('UUID de institución inválido'), {
+            message: 'Debes seleccionar al menos una institución para registrarte'
+        }).min(1, 'Debes seleccionar al menos una institución para registrarte')
+    )
 }).refine((data) => data.password === data.confirmPassword, {
     message: 'Las contraseñas no coinciden',
     path: ['confirmPassword']
