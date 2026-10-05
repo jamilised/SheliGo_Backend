@@ -42,7 +42,7 @@ class AuthService {
 
     // auth-service.ts
 
-    register = async (body: any, files: any) => {
+    register = async (body: any, archivoImagen?: Express.Multer.File) => {
         const { nombre, apellido, email, telefono, password, instituciones_ids } = body;
 
         console.log('⚡ SERVICIO AUTH: Iniciando proceso de registro para:', email);
@@ -96,8 +96,7 @@ class AuthService {
         // --- 5. PROCESAMIENTO Y SUBIDA DE IMAGEN REUTILIZABLE ---
         let fotoFinalPath = 'usuarios/default.png';
 
-        if (files && files.length > 0) {
-            const archivoImagen = files[0];
+        if (archivoImagen) {
             const fileName = `${nuevoUsuario.id}.jpg`;
 
             const pathSubido = await StorageHelper.optimizarYSubir(

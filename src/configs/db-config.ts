@@ -1,6 +1,3 @@
-const sslDisabled =
-    process.env.DB_SSL === 'false' || process.env.DB_SSL === '0'
-
 const DBConfig = {
     host     : process.env.DB_HOST ?? '',
     database : process.env.DB_DATABASE ?? '',
@@ -8,9 +5,9 @@ const DBConfig = {
     password : process.env.DB_PASSWORD ?? '',
     port     : Number(process.env.DB_PORT) || 5432,
 
-    ssl: sslDisabled
-        ? false
-        : { rejectUnauthorized: true }
+    ssl: {
+        rejectUnauthorized: false
+    }
 }
 
 export default DBConfig;

@@ -47,15 +47,12 @@ const editarPerfil = async (
     next: NextFunction
 ) => {
 
-    console.log(req.body);
-    console.log(req.files);
-
     try {
 
         const usuario = await usuariosService.editarPerfil(
             res.locals.userIdLogged,
             req.body,
-            req.files
+            req.file
         );
 
         return res.status(200).json({

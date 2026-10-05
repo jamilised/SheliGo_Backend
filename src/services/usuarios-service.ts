@@ -58,7 +58,7 @@ class UsuariosService {
     editarPerfil = async (
         id: string | undefined,
         body: any,
-        files: any
+        archivo?: Express.Multer.File
     ) => {
 
         if (!id) {
@@ -74,9 +74,7 @@ class UsuariosService {
         let fotoFinal = usuario.foto;
 
         /* ¿Subió una foto nueva? */
-        if (files && files.length > 0) {
-
-            const archivo = files[0];
+        if (archivo) {
 
             const extensionesPermitidas = [".jpg", ".jpeg", ".png", ".jfif"];
             const extension = path.extname(archivo.originalname).toLowerCase();
@@ -117,7 +115,7 @@ class UsuariosService {
             body.apellido !== undefined ||
             body.eliminarFoto ||
             body.instituciones_ids !== undefined ||
-            (files && files.length > 0);
+            archivo !== undefined;
 
         if (!huboCambios) {
             throw new AppError("Debe modificar al menos un campo.", 400);

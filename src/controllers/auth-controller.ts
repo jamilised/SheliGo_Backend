@@ -21,7 +21,7 @@ const register = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log('CONTROLLER AUTH: Iniciando registro');
         
-        const nuevoUsuario = await authService.register(req.body, req.files);
+        const nuevoUsuario = await authService.register(req.body, req.file);
 
         return res.status(201).json({
             status: 'success',

@@ -1,23 +1,7 @@
 import { Router } from 'express';
 import chatController from '../controllers/chat-controller.js';
 import { authMiddleware } from '../middlewares/auth-middleware.js';
-import multer from 'multer';
-import AppError from '../errors/app-error.js';
-
-// Configuración de Multer para aceptar únicamente imágenes en memoria
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: 8 * 1024 * 1024 // Límite máximo de 8MB por foto
-    },
-    fileFilter: (_req, file, cb) => {
-        if (file.mimetype.startsWith('image/')) {
-            cb(null, true);
-        } else {
-            cb(new AppError('Solo se permiten archivos de imagen (JPEG, PNG, WEBP, etc.).', 400) as any, false);
-        }
-    }
-});
+import upload from "../middlewares/upload-middleware.js";
 
 const router = Router();
 

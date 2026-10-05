@@ -250,6 +250,14 @@ Próximas funcionalidades previstas:
 - Base de datos PostgreSQL.
 - Imágenes almacenadas en Supabase Storage.
 
+## Carga de imágenes
+
+- Registro y edición de perfil: un archivo opcional en el campo `foto`.
+- Mensajes de chat: un archivo opcional en el campo `foto`.
+- Publicaciones: hasta cinco archivos en el campo `imagenes`.
+- Se aceptan imágenes JPEG, PNG y WEBP, con un máximo de 8 MiB por archivo.
+- Las solicitudes multipart tienen límites de cantidad y tamaño para archivos y campos.
+
 ## Arquitectura
 
 ```mermaid
@@ -273,4 +281,3 @@ E --> J[Bcrypt]
 Proyecto desarrollado como trabajo académico para ORT Argentina.
 
 Equipo de desarrollo: **SheliGo**.
-

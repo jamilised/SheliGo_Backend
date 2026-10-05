@@ -11,62 +11,45 @@ export default class DbPg {
     }
 
     getDBPool = (): Pool => {
-
         if (this.DBPool == null) {
             this.DBPool = new Pool(config)
         }
-
         return this.DBPool
     }
 
     queryAll = async (sql: string, values: any[] | null = null) => {
-
-        let returnArray = null
-
         try {
-
             const resultPg = values
                 ? await this.getDBPool().query(sql, values)
                 : await this.getDBPool().query(sql)
 
-            returnArray = resultPg.rows
-
+            return resultPg.rows
         } catch (error) {
-
             if (error instanceof Error) {
                 LogHelper.logError(error)
             }
-
+            throw error // Relanzar para que el servicio/controlador capture el fallo de BD
         }
-
-        return returnArray
     }
 
     queryOne = async (sql: string, values: any[] | null = null) => {
-
-        let returnEntity = null
-
         try {
-
             const resultPg = values
                 ? await this.getDBPool().query(sql, values)
                 : await this.getDBPool().query(sql)
 
             if (resultPg.rows.length > 0) {
-                returnEntity = resultPg.rows[0]
+                return resultPg.rows[0]
             }
-
+            return null
         } catch (error) {
-
             console.error('ERROR REAL POSTGRES:')
             console.error(error)
 
             if (error instanceof Error) {
                 LogHelper.logError(error)
             }
-
+            throw error // Relanzar para que el servicio/controlador capture el fallo de BD
         }
-
-        return returnEntity
     }
 }
