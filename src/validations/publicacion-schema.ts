@@ -18,10 +18,10 @@ const fechaValidacion = z.string()
     .optional();
 
 export const searchPublicacionSchema = z.object({
-    busqueda: z.string().optional(),
+    busqueda: z.string().trim().max(100, 'La búsqueda no puede superar 100 caracteres').optional(),
     categoria_id: z.string().uuid('ID de categoría inválido').optional(),
     institucion_id: z.string().uuid('ID de institución inválido').optional(),
-    lugar_institucion: z.string().optional(),
+    lugar_institucion: z.string().trim().max(100, 'El lugar no puede superar 100 caracteres').optional(),
     fecha_desde: fechaValidacion,
     fecha_hasta: fechaValidacion,
     tipo: z.enum(['perdido', 'encontrado'], {
@@ -99,7 +99,31 @@ export const updatePublicacionSchema = createPublicacionSchema
         }).optional(),
 
         fotosAEliminar: z.union([
-            z.string(),
-            z.array(z.string())
+            z.array(z.string().uuid()).max(5),
+            z.string().transform((value, context) => {
+                let parsedValue: unknown;
+
+                try {
+                    parsedValue = JSON.parse(value);
+                } catch {
+                    parsedValue = value;
+                }
+
+                const ids = Array.isArray(parsedValue) ? parsedValue : [parsedValue];
+                const result = z.array(z.string().uuid()).max(5).safeParse(ids);
+
+                if (!result.success) {
+                    for (const issue of result.error.issues) {
+                        context.addIssue({
+                            code: "custom",
+                            message: issue.message,
+                            path: issue.path
+                        });
+                    }
+                    return z.NEVER;
+                }
+
+                return result.data;
+            })
         ]).optional()
     });

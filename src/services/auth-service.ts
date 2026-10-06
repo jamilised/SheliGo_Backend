@@ -1,136 +1,125 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
 import UsuariosRepository from '../repositories/usuarios-repository.js';
-import { StorageHelper } from '../helpers/storage-helper.js'; // 🚀 Usamos el helper genérico estático
+import { StorageHelper } from '../helpers/storage-helper.js';
 import AppError from '../errors/app-error.js';
+import { BCRYPT_SALT_ROUNDS, getJwtSecret } from '../configs/security-config.js';
 
 class AuthService {
     private usuariosRepo = UsuariosRepository;
-login = async (email: string, password: string) => {
-    console.log('⚡ SERVICIO AUTH: Iniciando login para:', email);
 
-    const usuario = await this.usuariosRepo.getByEmail(
-        email.toLowerCase().trim()
-    );
-    if (!usuario) {
-        throw new AppError('Credenciales inválidas', 401);
-    }
-
-    const passwordValida = await bcrypt.compare(password, usuario.password_hash);
-    if (!passwordValida) {
-        throw new AppError('Credenciales inválidas', 401);
-    }
-
-    // OBTENER LAS INSTITUCIONES ASOCIADAS AL USUARIO
-    const instituciones = (await this.usuariosRepo.getInstitucionesByUsuarioId(usuario.id)) || [];
-
-    const token = jwt.sign(
-        { userId: usuario.id },
-        process.env.JWT_SECRET!,
-        { expiresIn: '1d' }
-    );
-
-    // INCLUIR 'instituciones' EN EL OBJETO DE RESPUESTA
-    return {
-        token,
-        usuario: {
-            id: usuario.id,
-            nombre: usuario.nombre,
-            apellido: usuario.apellido,
-            email: usuario.email,
-            foto: usuario.foto,
-            instituciones 
+    login = async (email: string, password: string) => {
+        const usuario = await this.usuariosRepo.getByEmail(
+            email.toLowerCase().trim()
+        );
+        if (!usuario) {
+            throw new AppError('Credenciales inválidas', 401);
         }
+
+        if (!usuario.password_hash) {
+            throw new AppError('Credenciales inválidas', 401);
+        }
+
+        const passwordValida = await bcrypt.compare(password, usuario.password_hash);
+        if (!passwordValida) {
+            throw new AppError('Credenciales inválidas', 401);
+        }
+
+        const token = jwt.sign(
+            { userId: usuario.id },
+            getJwtSecret(),
+            { expiresIn: '1d' }
+        );
+
+        return {
+            token,
+            usuario: {
+                id: usuario.id,
+                nombre: usuario.nombre,
+                apellido: usuario.apellido,
+                email: usuario.email,
+                foto: usuario.foto
+            }
+        };
     };
-};
-
-    // auth-service.ts
-
-    register = async (body: any, files: any) => {
+    register = async (body: any, archivoImagen?: Express.Multer.File) => {
         const { nombre, apellido, email, telefono, password, instituciones_ids } = body;
 
-        console.log('⚡ SERVICIO AUTH: Iniciando proceso de registro para:', email);
+        let arrayInstituciones: string[] = [];
+        if (Array.isArray(instituciones_ids)) {
+            arrayInstituciones = instituciones_ids;
+        } else if (typeof instituciones_ids === 'string') {
+            try {
+                const parsed = JSON.parse(instituciones_ids);
+                arrayInstituciones = Array.isArray(parsed) ? parsed : [instituciones_ids];
+            } catch {
+                arrayInstituciones = [instituciones_ids];
+            }
+        }
 
-        // --- 1. VALIDACIÓN DE BASE DE DATOS ---
-        const usuarioExistente = await this.usuariosRepo.getByEmail(email);
+        arrayInstituciones = [...new Set(arrayInstituciones)];
+        if (arrayInstituciones.length === 0) {
+            throw new AppError('Debes seleccionar al menos una institución para registrarte.', 400);
+        }
+
+        const emailNormalizado = email.toLowerCase().trim();
+        const usuarioExistente = await this.usuariosRepo.getByEmail(emailNormalizado);
         if (usuarioExistente) {
-            console.log('⚠️ Validación fallida: El email ya existe:', email);
             throw new AppError('El correo electrónico ya se encuentra registrado.', 409);
         }
 
-        // --- 2. CIFRADO DE CONTRASEÑA ---
-        const saltRounds = 12;
-        const passwordHash = await bcrypt.hash(password, saltRounds);
-
-        // --- 3. CREACIÓN DEL REGISTRO DE USUARIO ---
-        const nuevoUsuario = await this.usuariosRepo.create({
-            nombre: nombre.trim(),
-            apellido: apellido.trim(),
-            email: email.toLowerCase().trim(),
-            telefono: telefono ? telefono.toString().trim() : null,
-            rol: 'user',
-            password_hash: passwordHash
-        });
-
-        if (!nuevoUsuario) {
-            throw new AppError('No se pudo completar el registro del usuario.', 500);
-        }
-
-        // --- 4. ASOCIACIÓN DE INSTITUCIONES ---
-        let arrayInstituciones: string[] = [];
-
-        if (instituciones_ids) {
-            if (Array.isArray(instituciones_ids)) {
-                arrayInstituciones = instituciones_ids;
-            } else if (typeof instituciones_ids === 'string') {
-                try {
-                    // Si viene como string JSON desde FormData ej: '["uuid1", "uuid2"]'
-                    arrayInstituciones = JSON.parse(instituciones_ids);
-                } catch {
-                    // Si viene como una sola string limpia ej: 'uuid1'
-                    arrayInstituciones = [instituciones_ids];
-                }
-            }
-
-            if (arrayInstituciones.length > 0) {
-                await this.usuariosRepo.asociarInstituciones(nuevoUsuario.id, arrayInstituciones);
-            }
-        }
-
-        // --- 5. PROCESAMIENTO Y SUBIDA DE IMAGEN REUTILIZABLE ---
+        const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
+        const usuarioId = randomUUID();
         let fotoFinalPath = 'usuarios/default.png';
 
-        if (files && files.length > 0) {
-            const archivoImagen = files[0];
-            const fileName = `${nuevoUsuario.id}.jpg`;
-
+        if (archivoImagen) {
             const pathSubido = await StorageHelper.optimizarYSubir(
                 archivoImagen.buffer,
                 'usuarios',
-                fileName,
+                `${usuarioId}.jpg`,
                 { width: 400, height: 400, fit: 'cover' }
             );
 
-            if (pathSubido) {
-                fotoFinalPath = pathSubido;
-                await this.usuariosRepo.updateFoto(nuevoUsuario.id, fotoFinalPath);
+            if (!pathSubido) {
+                throw new AppError('No se pudo guardar la imagen de perfil. El registro no fue creado.', 502);
             }
-        } else {
-            console.log('ℹ️ No se detectó foto. Asignando default.');
-            await this.usuariosRepo.updateFoto(nuevoUsuario.id, fotoFinalPath);
+
+            fotoFinalPath = pathSubido;
         }
 
-        nuevoUsuario.foto = fotoFinalPath;
+        try {
+            const resultado = await this.usuariosRepo.createWithInstitutions({
+                id: usuarioId,
+                nombre: nombre.trim(),
+                apellido: apellido.trim(),
+                email: emailNormalizado,
+                telefono: telefono ? telefono.toString().trim() : null,
+                rol: 'user',
+                password_hash: passwordHash
+            }, arrayInstituciones, fotoFinalPath);
 
-        // Obtenemos el detalle completo de las instituciones asociadas para devolver al cliente
-        const institucionesAsociadas = await this.usuariosRepo.getInstitucionesByUsuarioId(nuevoUsuario.id);
-
-        console.log('🎉 PROCESO DE REGISTRO FINALIZADO CON ÉXITO');
-
-        return {
-            ...nuevoUsuario,
-            instituciones: institucionesAsociadas || []
-        };
+            return {
+                ...resultado.usuario,
+                instituciones: resultado.instituciones
+            };
+        } catch (error) {
+            if (archivoImagen && fotoFinalPath !== 'usuarios/default.png') {
+                try {
+                    await StorageHelper.eliminarObjeto(fotoFinalPath);
+                } catch (cleanupError) {
+                    console.error('Falló el registro y no se pudo limpiar la foto subida.', {
+                        error,
+                        cleanupError
+                    });
+                    throw new AppError(
+                        'No se pudo completar el registro ni limpiar la imagen. Contacta con soporte.',
+                        502
+                    );
+                }
+            }
+            throw error;
+        }
     };
 
     loginConGoogle = async (tokenSupabase: string) => {
@@ -179,7 +168,7 @@ login = async (email: string, password: string) => {
 
         const token = jwt.sign(
             { userId: usuarioLocal.id },
-            process.env.JWT_SECRET!,
+            getJwtSecret(),
             { expiresIn: '24h' }
         );
 
@@ -206,6 +195,6 @@ login = async (email: string, password: string) => {
         await this.usuariosRepo.asociarInstituciones(userId, institucionesIds);
         return await this.usuariosRepo.getInstitucionesByUsuarioId(userId);
     };
-}
+};
 
 export default new AuthService();

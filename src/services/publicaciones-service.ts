@@ -4,6 +4,7 @@ import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 import ArchivosRepository from '../repositories/archivos-repository.js';
 import { DateHelper } from '../helpers/date-helper.js';
+import { randomUUID } from 'node:crypto';
 
 import PreguntasRepository
     from '../repositories/preguntas-repository.js';
@@ -38,14 +39,14 @@ class PublicacionesService {
     };
 
     searchPublicaciones = async (filtros: {
-        busqueda?: string;
-        categoria_id?: string;
-        institucion_id?: string;
-        lugar_institucion?: string;
-        fecha_desde?: string;
-        fecha_hasta?: string;
-        tipo?: string;
-        estado?: string;
+        busqueda?: string | undefined;
+        categoria_id?: string | undefined;
+        institucion_id?: string | undefined;
+        lugar_institucion?: string | undefined;
+        fecha_desde?: string | undefined;
+        fecha_hasta?: string | undefined;
+        tipo?: string | undefined;
+        estado?: string | undefined;
     }) => {
         DateHelper.validarRangoFechas(filtros.fecha_desde, filtros.fecha_hasta);
         const publicaciones = await this.repository.search(filtros);
@@ -61,43 +62,68 @@ class PublicacionesService {
     };
 
     createPublicacion = async (body: any, files: any, usuarioId: string) => {
-        const publicacion = await this.repository.create({
-            nombre: body.nombre.trim(),
-            descripcion: body.descripcion?.trim() || null,
-            fecha_evento: body.fecha_evento,
-            categoria_id: body.categoria_id,
-            institucion_id: body.institucion_id || null,
-            lugar_institucion: body.lugar_institucion || null,
-            tipo: body.tipo,
-            usuario_id: usuarioId,
-            estado: 'activa'
-        });
+        const publicacionId = randomUUID();
+        const archivosSubidos: Array<{
+            url: string;
+            mime_type: string;
+            es_principal: boolean;
+        }> = [];
+        const rutasIntentadas: string[] = [];
 
-        if (!publicacion) {
-            throw new AppError('No se pudo crear la publicación', 500);
-        }
-
-        if (files && files.length > 0) {
-            for (let i = 0; i < files.length; i++) {
+        try {
+            for (let i = 0; i < (files?.length ?? 0); i++) {
                 const archivo = files[i];
+                const nombreArchivo = `${publicacionId}_${i}.jpg`;
+                rutasIntentadas.push(`publicaciones/${nombreArchivo}`);
+
                 const ruta = await StorageHelper.optimizarYSubir(
                     archivo.buffer,
                     'publicaciones',
-                    `${publicacion.id}_${i}.jpg`
+                    nombreArchivo
                 );
+                if (!ruta) {
+                    throw new AppError(
+                        'No se pudo guardar una de las imágenes. La publicación no fue creada.',
+                        502
+                    );
+                }
 
-                if (!ruta) continue;
-
-                await this.archivosRepository.create({
-                    publicacion_id: publicacion.id,
+                archivosSubidos.push({
                     url: ruta,
                     mime_type: archivo.mimetype,
                     es_principal: i === 0
                 });
             }
-        }
 
-        return publicacion;
+            const publicacion = await this.repository.createWithFiles(publicacionId, {
+                nombre: body.nombre.trim(),
+                descripcion: body.descripcion?.trim() || null,
+                fecha_evento: body.fecha_evento,
+                categoria_id: body.categoria_id,
+                institucion_id: body.institucion_id || null,
+                lugar_institucion: body.lugar_institucion || null,
+                tipo: body.tipo,
+                usuario_id: usuarioId,
+                estado: 'activa'
+            }, archivosSubidos);
+
+            return publicacion;
+        } catch (error) {
+            try {
+                await StorageHelper.eliminarObjetos(rutasIntentadas);
+            } catch (cleanupError) {
+                console.error('Falló la creación de la publicación y no se pudieron limpiar las imágenes.', {
+                    error,
+                    cleanupError
+                });
+                throw new AppError(
+                    'No se pudo completar la publicación ni limpiar sus imágenes. Contacta con soporte.',
+                    502
+                );
+            }
+
+            throw error;
+        }
     };
 
     // Soft delete: solo cambia el estado en BD
@@ -178,7 +204,7 @@ class PublicacionesService {
         return await this.repository.updateEstado(publicacionId, 'recuperada');
     };
 
-    updatePublicacion = async (id: string, body: any, files: any, usuarioId: string) => {
+updatePublicacion = async (id: string, body: any, files: any, usuarioId: string) => {
         const publicacionOriginal = await this.repository.getById(id);
         if (!publicacionOriginal) {
             throw new NotFoundError('Publicación no encontrada.');
@@ -188,60 +214,142 @@ class PublicacionesService {
             throw new AppError('No tienes permisos para editar esta publicación.', 403);
         }
 
-        const publicacionActualizada = await this.repository.update(id, {
-            nombre: body.nombre !== undefined ? body.nombre : publicacionOriginal.nombre,
-            descripcion: body.descripcion !== undefined ? body.descripcion : publicacionOriginal.descripcion,
-            fecha_evento: body.fecha_evento !== undefined ? body.fecha_evento : publicacionOriginal.fecha_evento,
-            categoria_id: body.categoria_id !== undefined ? body.categoria_id : publicacionOriginal.categoria_id,
-            institucion_id: body.institucion_id !== undefined ? body.institucion_id : publicacionOriginal.institucion_id,
-            lugar_institucion: body.lugar_institucion !== undefined ? body.lugar_institucion : publicacionOriginal.lugar_institucion,
-            tipo: body.tipo !== undefined ? body.tipo : publicacionOriginal.tipo,
-            estado: body.estado !== undefined ? body.estado : publicacionOriginal.estado
-        });
+        const fotosEliminar: string[] = body.fotosAEliminar ?? [];
+        const archivosSolicitados = fotosEliminar.length > 0
+            ? await this.archivosRepository.getByIdsForPublication(
+                fotosEliminar,
+                id,
+                usuarioId
+            )
+            : [];
 
-        if (!publicacionActualizada) {
-            throw new AppError('No se pudo actualizar la publicación.', 500);
+        if (archivosSolicitados.length !== new Set(fotosEliminar).size) {
+            throw new NotFoundError('Uno o más archivos no pertenecen a esta publicación.');
         }
+        const archivosOriginales = await this.archivosRepository.getByPublicacionId(id) || [];
+        const archivoPrincipalOriginal = archivosOriginales.find((archivo: any) => archivo.es_principal);
 
-        let fotosEliminar = body.fotosAEliminar;
-        if (fotosEliminar) {
-            if (typeof fotosEliminar === 'string') {
-                try { fotosEliminar = JSON.parse(fotosEliminar); }
-                catch { fotosEliminar = [fotosEliminar]; }
-            }
+        const archivosNuevos: Array<{
+            url: string;
+            mime_type: string;
+            es_principal: boolean;
+        }> = [];
+        const rutasNuevas: string[] = [];
+        let rutasNuevasLimpiadas = false;
+        let resultado: any = null;
 
-            if (Array.isArray(fotosEliminar) && fotosEliminar.length > 0) {
-                for (const fotoId of fotosEliminar) {
-                    await this.archivosRepository.deleteById(fotoId);
-                }
-            }
-        }
-
-        if (files && files.length > 0) {
-            const archivosExistentes = await this.archivosRepository.getByPublicacionId(id) || [];
-            let indexInicio = archivosExistentes.length;
-
-            for (let i = 0; i < files.length; i++) {
+        try {
+            for (let i = 0; i < (files?.length ?? 0); i++) {
                 const archivo = files[i];
-                const nombreArchivo = `${id}_${Date.now()}_${indexInicio + i}.jpg`;
+                const nombreArchivo = `${id}_${randomUUID()}.jpg`;
+                rutasNuevas.push(`publicaciones/${nombreArchivo}`);
 
                 const ruta = await StorageHelper.optimizarYSubir(
                     archivo.buffer,
                     'publicaciones',
                     nombreArchivo
                 );
+                if (!ruta) {
+                    throw new AppError(
+                        'No se pudo guardar una de las imágenes. La actualización no fue aplicada.',
+                        502
+                    );
+                }
 
-                if (!ruta) continue;
-
-                await this.archivosRepository.create({
-                    publicacion_id: id,
+                archivosNuevos.push({
                     url: ruta,
                     mime_type: archivo.mimetype,
                     es_principal: false
                 });
             }
+
+            resultado = await this.repository.updateWithFileChanges(
+                id,
+                usuarioId,
+                {
+                    nombre: body.nombre !== undefined ? body.nombre : publicacionOriginal.nombre,
+                    descripcion: body.descripcion !== undefined ? body.descripcion : publicacionOriginal.descripcion,
+                    fecha_evento: body.fecha_evento !== undefined ? body.fecha_evento : publicacionOriginal.fecha_evento,
+                    categoria_id: body.categoria_id !== undefined ? body.categoria_id : publicacionOriginal.categoria_id,
+                    institucion_id: body.institucion_id !== undefined ? body.institucion_id : publicacionOriginal.institucion_id,
+                    lugar_institucion: body.lugar_institucion !== undefined ? body.lugar_institucion : publicacionOriginal.lugar_institucion,
+                    tipo: body.tipo !== undefined ? body.tipo : publicacionOriginal.tipo,
+                    estado: body.estado !== undefined ? body.estado : publicacionOriginal.estado
+                },
+                fotosEliminar,
+                archivosNuevos
+            );
+
+            if (!resultado) {
+                throw new AppError('La publicación cambió o dejó de estar disponible; vuelve a intentarlo.', 409);
+            }
+
+            if (resultado.archivosEliminados.length > 0) {
+                try {
+                    await StorageHelper.eliminarObjetos(
+                        resultado.archivosEliminados.map((archivo: any) => archivo.url)
+                    );
+                } catch (storageError) {
+                    try {
+                        await this.repository.restoreAfterStorageFailure(
+                            id,
+                            {
+                                categoria_id: publicacionOriginal.categoria_id,
+                                institucion_id: publicacionOriginal.institucion_id,
+                                nombre: publicacionOriginal.nombre,
+                                descripcion: publicacionOriginal.descripcion,
+                                fecha_evento: publicacionOriginal.fecha_evento,
+                                tipo: publicacionOriginal.tipo,
+                                estado: publicacionOriginal.estado,
+                                lugar_institucion: publicacionOriginal.lugar_institucion
+                            },
+                            archivoPrincipalOriginal?.id ?? null,
+                            resultado.archivosEliminados,
+                            rutasNuevas
+                        );
+                        await StorageHelper.eliminarObjetos(rutasNuevas);
+                        rutasNuevasLimpiadas = true;
+                    } catch (compensationError) {
+                        console.error(
+                            `Falló la eliminación de imágenes de la publicación ${id} y también su compensación.`,
+                            { storageError, compensationError }
+                        );
+                        throw new AppError(
+                            'No se pudo completar la actualización ni revertir todos sus cambios. Contacta con soporte.',
+                            500
+                        );
+                    }
+
+                    console.error(
+                        `No se pudieron eliminar imágenes de Storage para la publicación ${id}.`,
+                        storageError
+                    );
+                    throw new AppError(
+                        'No se pudieron eliminar las imágenes del almacenamiento. Los cambios de base de datos fueron revertidos.',
+                        502
+                    );
+                }
+            }
+        } catch (error) {
+            if (rutasNuevas.length > 0 && !rutasNuevasLimpiadas) {
+                try {
+                    await StorageHelper.eliminarObjetos(rutasNuevas);
+                } catch (cleanupError) {
+                    console.error(
+                        `No se pudieron limpiar las imágenes nuevas de la publicación ${id}.`,
+                        { error, cleanupError }
+                    );
+                    throw new AppError(
+                        'No se pudo completar la actualización ni limpiar las imágenes nuevas. Contacta con soporte.',
+                        502
+                    );
+                }
+            }
+
+            throw error;
         }
 
+        const publicacionActualizada = resultado?.publicacion;
         const todosLosArchivos = await this.archivosRepository.getByPublicacionId(id) || [];
         const tienePrincipal = todosLosArchivos.some((a: any) => a.es_principal);
 
@@ -254,17 +362,16 @@ class PublicacionesService {
             (files && files.length > 0);
 
         const cambioContenido =
-            publicacionOriginal.nombre !== publicacionActualizada.nombre ||
-            publicacionOriginal.descripcion !== publicacionActualizada.descripcion ||
-            publicacionOriginal.fecha_evento?.toString() !== publicacionActualizada.fecha_evento?.toString() ||
-            publicacionOriginal.categoria_id !== publicacionActualizada.categoria_id ||
-            publicacionOriginal.institucion_id !== publicacionActualizada.institucion_id ||
-            publicacionOriginal.lugar_institucion !== publicacionActualizada.lugar_institucion ||
-            publicacionOriginal.tipo !== publicacionActualizada.tipo ||
-            publicacionOriginal.estado !== publicacionActualizada.estado;
+            publicacionOriginal.nombre !== publicacionActualizada?.nombre ||
+            publicacionOriginal.descripcion !== publicacionActualizada?.descripcion ||
+            publicacionOriginal.fecha_evento?.toString() !== publicacionActualizada?.fecha_evento?.toString() ||
+            publicacionOriginal.categoria_id !== publicacionActualizada?.categoria_id ||
+            publicacionOriginal.institucion_id !== publicacionActualizada?.institucion_id ||
+            publicacionOriginal.lugar_institucion !== publicacionActualizada?.lugar_institucion ||
+            publicacionOriginal.tipo !== publicacionActualizada?.tipo ||
+            publicacionOriginal.estado !== publicacionActualizada?.estado;
 
         if (cambioContenido || huboCambiosEnFotos) {
-
             const usuarios =
                 await this.preguntasRepository
                     .getUsuariosPorPublicacion(
@@ -273,25 +380,13 @@ class PublicacionesService {
                     ) ?? [];
 
             for (const usuario of usuarios) {
-
                 await this.notificacionesService
                     .crearNotificacion({
-
-                        usuario_id:
-                            usuario.usuario_id,
-
-                        publicacion_id:
-                            id,
-
-                        tipo:
-                            "publicacion_editada",
-
-                        titulo:
-                            "Publicación editada",
-
-                        contenido:
-                            "Una publicación que te interesa fue modificada."
-
+                        usuario_id: usuario.usuario_id,
+                        publicacion_id: id,
+                        tipo: "publicacion_editada",
+                        titulo: "Publicación editada",
+                        contenido: "Una publicación que te interesa fue modificada."
                     });
             }
         }

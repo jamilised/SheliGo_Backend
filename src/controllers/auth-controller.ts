@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import authService from '../services/auth-service.js';
-import jwt from 'jsonwebtoken';
+import AppError from '../errors/app-error.js';
 
 const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -19,9 +19,7 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 
 const register = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('CONTROLLER AUTH: Iniciando registro');
-        
-        const nuevoUsuario = await authService.register(req.body, req.files);
+        const nuevoUsuario = await authService.register(req.body, req.file);
 
         return res.status(201).json({
             status: 'success',
@@ -83,36 +81,14 @@ const asociarInstituciones = async (
     next: NextFunction
 ) => {
     try {
-        // El authMiddleware guarda el ID del usuario acá
-        const userId = res.locals.userIdLogged;
-
-        if (!userId) {
-            return res.status(401).json({
-                status: "error",
-                message: "No se pudo identificar al usuario autenticado."
-            });
-        }
-
+        const userId: unknown = res.locals.userIdLogged;
         const { instituciones_ids } = req.body;
 
-        if (
-            !Array.isArray(instituciones_ids) ||
-            instituciones_ids.length === 0
-        ) {
-            return res.status(400).json({
-                status: "error",
-                message: "Debes seleccionar al menos una institución."
-            });
+        if (typeof userId !== 'string' || !userId) {
+            return next(new AppError('Usuario no autenticado', 401));
         }
 
-        console.log("Usuario autenticado:", userId);
-        console.log("Instituciones recibidas:", instituciones_ids);
-
-        const instituciones =
-            await authService.asociarInstitucionesGoogle(
-                userId,
-                instituciones_ids
-            );
+        const instituciones = await authService.asociarInstitucionesGoogle(userId, instituciones_ids);
 
         return res.status(200).json({
             status: "success",

@@ -1,5 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
 import ChatService from '../services/chat-service.js';
+import {
+    chatMensajeParamsSchema,
+    chatSalasQuerySchema,
+    chatSalaParamsSchema
+} from '../validations/chat-schema.js';
 
 const abrirOCrearChat = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -13,7 +18,7 @@ const abrirOCrearChat = async (req: Request, res: Response, next: NextFunction) 
             });
         }
 
-        const sala = await ChatService.obtenerOCrearSala(usuarioLogueadoId, otroUsuarioId as string);
+        const sala = await ChatService.obtenerOCrearSala(usuarioLogueadoId, otroUsuarioId);
 
         return res.status(200).json({
             status: 'success',
@@ -27,7 +32,7 @@ const abrirOCrearChat = async (req: Request, res: Response, next: NextFunction) 
 const getMensajesSala = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const usuarioId = res.locals.userIdLogged as string;
-        const salaId = req.params.id as string; 
+        const { id: salaId } = chatSalaParamsSchema.parse(req.params);
 
         if (!salaId) {
             return res.status(400).json({
@@ -62,9 +67,9 @@ const enviarMensaje = async (req: Request, res: Response, next: NextFunction) =>
 
         // Enviamos al servicio el texto o el archivo capturado
         const nuevoMensaje = await ChatService.guardarMensaje(
-            sala_id as string, 
+            sala_id,
             emisorId, 
-            contenido as string | undefined,
+            contenido,
             archivoFoto
         );
 
@@ -81,9 +86,9 @@ const getMisSalas = async (req: Request, res: Response, next: NextFunction) => {
         const usuarioId = res.locals.userIdLogged as string; 
         
         // 🚀 Leemos el query parameter de la URL (ej: /api/chat/salas?filtro=no_leidas)
-        const filtro = req.query.filtro as string | undefined;
+        const { filtro, busqueda } = chatSalasQuerySchema.parse(res.locals.validatedQuery);
 
-        const salas = await ChatService.obtenerMisSalas(usuarioId, filtro);
+        const salas = await ChatService.obtenerMisSalas(usuarioId, filtro, busqueda);
 
         return res.status(200).json({
             status: 'success',
@@ -97,7 +102,7 @@ const getMisSalas = async (req: Request, res: Response, next: NextFunction) => {
 const eliminarMensaje = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const usuarioId = res.locals.userIdLogged as string;
-        const { id: mensajeId } = req.params;
+        const { id: mensajeId } = chatMensajeParamsSchema.parse(req.params);
 
         if (!mensajeId) {
             return res.status(400).json({
@@ -106,7 +111,7 @@ const eliminarMensaje = async (req: Request, res: Response, next: NextFunction) 
             });
         }
 
-        const mensajeEliminado = await ChatService.eliminarMensaje(mensajeId as string, usuarioId);
+        const mensajeEliminado = await ChatService.eliminarMensaje(mensajeId, usuarioId);
 
         return res.status(200).json({
             status: 'success',

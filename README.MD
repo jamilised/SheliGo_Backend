@@ -155,13 +155,22 @@ DB_PORT=
 DB_DATABASE=
 DB_USER=
 DB_PASSWORD=
+DB_POOL_MAX=10
+DB_POOL_IDLE_TIMEOUT_MS=30000
+DB_POOL_CONNECTION_TIMEOUT_MS=2000
 
+# Secreto aleatorio de al menos 32 caracteres.
 JWT_SECRET=
 
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_BUCKET=
+SUPABASE_BUCKET=avatars
 ```
+
+El arranque valida que estén configuradas las variables requeridas de PostgreSQL,
+JWT y Supabase Storage. El mismo esquema de contraseña se aplica al registro y
+al cambio de contraseña: mínimo 8 caracteres, máximo 100, al menos una mayúscula
+y un número. El hash usa bcrypt con costo 12.
 
 ## Ejecutar
 
@@ -173,6 +182,13 @@ El servidor iniciará por defecto en:
 
 ```
 http://localhost:3000
+```
+
+Para compilar y arrancar en producción:
+
+```bash
+npm run build
+npm start
 ```
 
 ---
@@ -250,6 +266,14 @@ Próximas funcionalidades previstas:
 - Base de datos PostgreSQL.
 - Imágenes almacenadas en Supabase Storage.
 
+## Carga de imágenes
+
+- Registro y edición de perfil: un archivo opcional en el campo `foto`.
+- Mensajes de chat: un archivo opcional en el campo `foto`.
+- Publicaciones: hasta cinco archivos en el campo `imagenes`.
+- Se aceptan imágenes JPEG, PNG y WEBP, con un máximo de 8 MiB por archivo.
+- Las solicitudes multipart tienen límites de cantidad y tamaño para archivos y campos.
+
 ## Arquitectura
 
 ```mermaid
@@ -273,4 +297,3 @@ E --> J[Bcrypt]
 Proyecto desarrollado como trabajo académico para ORT Argentina.
 
 Equipo de desarrollo: **SheliGo**.
-

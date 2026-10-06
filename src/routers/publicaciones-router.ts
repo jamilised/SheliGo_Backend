@@ -3,18 +3,47 @@ import publicacionesController from '../controllers/publicaciones-controller.js'
 import { authMiddleware } from '../middlewares/auth-middleware.js';
 import { validateQuery, validateBody } from '../middlewares/validation-middleware.js';
 import { searchPublicacionSchema, createPublicacionSchema, updatePublicacionSchema } from '../validations/publicacion-schema.js';
+import {
+    createPreguntaSchema,
+    createRespuestaSchema,
+    preguntaParamsSchema,
+    publicacionPreguntaParamsSchema
+} from '../validations/preguntas-schema.js';
 import upload from "../middlewares/upload-middleware.js";
+import { validateParams } from '../middlewares/validation-middleware.js';
 
 const router = Router();
 
 router.get('/recientes', authMiddleware, publicacionesController.getRecientes);
 router.get("/mias", authMiddleware, publicacionesController.getMisPublicaciones);
-router.get('/search', authMiddleware, publicacionesController.search);
+router.get(
+    '/search',
+    authMiddleware,
+    validateQuery(searchPublicacionSchema),
+    publicacionesController.search
+);
 router.get('/:id', authMiddleware, publicacionesController.getDetalle);
 router.get('/:id/archivos', authMiddleware, publicacionesController.getArchivos);
-router.get('/:id/preguntas', authMiddleware, publicacionesController.getPreguntas);
-router.post('/:id/preguntas', authMiddleware, publicacionesController.createPregunta);
-router.post("/preguntas/:preguntaId/respuesta", authMiddleware, publicacionesController.createRespuesta);
+router.get(
+    '/:id/preguntas',
+    authMiddleware,
+    validateParams(publicacionPreguntaParamsSchema),
+    publicacionesController.getPreguntas
+);
+router.post(
+    '/:id/preguntas',
+    authMiddleware,
+    validateParams(publicacionPreguntaParamsSchema),
+    validateBody(createPreguntaSchema),
+    publicacionesController.createPregunta
+);
+router.post(
+    '/preguntas/:preguntaId/respuesta',
+    authMiddleware,
+    validateParams(preguntaParamsSchema),
+    validateBody(createRespuestaSchema),
+    publicacionesController.createRespuesta
+);
 
 router.patch("/:id/recuperar", authMiddleware, publicacionesController.marcarRecuperada);
 

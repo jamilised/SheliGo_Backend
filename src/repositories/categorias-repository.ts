@@ -1,7 +1,7 @@
-import DbPg from '../database/db-pg.js';
+import dbPg from '../database/db-pg.js';
 
 class CategoriasRepository {
-    db = new DbPg();
+    db = dbPg;
 
     getAll = async () => {
         try {

@@ -1,13 +1,16 @@
 import { Router } from 'express';
-import multer from 'multer';
 import authController from '../controllers/auth-controller.js';
 import { validateBody } from '../middlewares/validation-middleware.js';
-import { loginSchema, registerSchema } from '../validations/auth-schema.js';
+import {
+    completeInstitutionsSchema,
+    loginSchema,
+    registerSchema
+} from '../validations/auth-schema.js';
 import { authMiddleware } from '../middlewares/auth-middleware.js';
 import rateLimit from "express-rate-limit";
+import upload from "../middlewares/upload-middleware.js";
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
 const authLimiter = rateLimit({
 
@@ -31,7 +34,7 @@ const authLimiter = rateLimit({
 router.post(
     '/register', 
     authLimiter,
-    upload.any(),
+    upload.single('foto'),
     validateBody(registerSchema),
     authController.register
 );
@@ -54,7 +57,8 @@ router.post('/google', authController.loginConGoogle);
 
 router.post(
     '/completar-instituciones', 
-    authMiddleware, 
+    authMiddleware,
+    validateBody(completeInstitutionsSchema),
     authController.asociarInstituciones
 );
 

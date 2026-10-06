@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import publicacionesService from '../services/publicaciones-service.js';
 import preguntasService from '../services/preguntas-service.js';
 import archivosService from '../services/archivos-service.js';
+import { searchPublicacionSchema } from '../validations/publicacion-schema.js';
 
 const getRecientes = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -23,10 +24,10 @@ const search = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log('⚡ CONTROLLER PUB: Iniciando búsqueda filtrada');
 
-        // El middleware 'validateQuery' ya validó y limpió req.query
+        const filtros = searchPublicacionSchema.parse(res.locals.validatedQuery);
         const publicaciones =
             await publicacionesService.searchPublicaciones(
-                req.query as any
+                filtros
             );
 
         return res.status(200).json({

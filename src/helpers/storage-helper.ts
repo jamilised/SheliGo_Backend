@@ -1,13 +1,65 @@
 import sharp from 'sharp';
+import { createClient } from '@supabase/supabase-js';
 
 export class StorageHelper {
-    private static readonly SUPABASE_STORAGE_URL = 'https://evovbsxgvzljkbcheipp.supabase.co/storage/v1/object/public/avatars/';
+    private static storageClient: ReturnType<typeof createClient> | null = null;
+
+    private static getSupabaseUrl(): string {
+        const supabaseUrl = process.env.SUPABASE_URL;
+        if (!supabaseUrl) {
+            throw new Error('Falta configurar SUPABASE_URL.');
+        }
+
+        return supabaseUrl.replace(/\/+$/, '');
+    }
+
+    private static getBucketName(): string {
+        const bucket = process.env.SUPABASE_BUCKET;
+        if (!bucket) {
+            throw new Error('Falta configurar SUPABASE_BUCKET.');
+        }
+        return bucket;
+    }
+
+    private static getStorageClient() {
+        if (!this.storageClient) {
+            const supabaseUrl = this.getSupabaseUrl();
+            const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+            if (!serviceRoleKey) {
+                throw new Error('Falta configurar el acceso de servidor a Supabase Storage.');
+            }
+
+            this.storageClient = createClient(supabaseUrl, serviceRoleKey, {
+                auth: {
+                    autoRefreshToken: false,
+                    persistSession: false
+                }
+            });
+        }
+
+        return this.storageClient;
+    }
+    static eliminarObjeto = async (relativePath: string): Promise<void> => {
+        await this.eliminarObjetos([relativePath]);
+    };
+
+    static eliminarObjetos = async (relativePaths: string[]): Promise<void> => {
+        if (relativePaths.length === 0) return;
+
+        const { error } = await this.getStorageClient()
+            .storage
+            .from(this.getBucketName())
+            .remove(relativePaths);
+
+        if (error) {
+            throw error;
+        }
+    };
 
     static buildUrl(relativePath: string | null | undefined): string {
-        if (!relativePath) {
-            return 'https://www.publicdomainpictures.net/pictures/200000/velka/placeholder-bege.jpg';
-        }
-        return `${this.SUPABASE_STORAGE_URL}${relativePath}`;
+        const objectPath = relativePath || 'usuarios/default.png';
+        return `${this.getSupabaseUrl()}/storage/v1/object/public/${this.getBucketName()}/${objectPath}`;
     }
 
     static optimizarYSubir = async (
@@ -23,15 +75,9 @@ export class StorageHelper {
 
         try {
 
-            console.log("⚙️ HELPER: Verificando imagen...");
-
-            // Si el buffer NO corresponde a una imagen válida,
-            // Sharp lanza una excepción automáticamente.
             let pipeline = sharp(fileBuffer);
 
             await pipeline.metadata();
-
-            console.log("⚙️ HELPER: Optimizando imagen...");
 
             if (opciones?.width || opciones?.height) {
 
@@ -68,7 +114,7 @@ export class StorageHelper {
                 `${folder}/${fileName}`;
 
             const storageUrl =
-                `https://evovbsxgvzljkbcheipp.supabase.co/storage/v1/object/avatars/${fotoFinalPath}`;
+                `${this.getSupabaseUrl()}/storage/v1/object/${this.getBucketName()}/${fotoFinalPath}`;
 
             const supabaseToken =
                 process.env.SUPABASE_SERVICE_ROLE_KEY || "";
@@ -94,14 +140,9 @@ export class StorageHelper {
             });
 
             if (!response.ok) {
-
-                const errorTexto =
-                    await response.text();
-
                 console.error(
-                    "❌ HELPER ERROR:",
-                    response.status,
-                    errorTexto
+                    'La carga del archivo en Supabase Storage falló.',
+                    { status: response.status }
                 );
 
                 return null;
@@ -112,14 +153,8 @@ export class StorageHelper {
 
         }
         catch (error) {
-
-            console.error(
-                "❌ HELPER ERROR:",
-                error
-            );
-
+            console.error('No se pudo procesar o cargar el archivo.', error);
             return null;
-
         }
 
     };

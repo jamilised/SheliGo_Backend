@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { passwordSchema } from './password-schema.js';
 
 const formatearNombre = (val: string) => {
     const limpio = val.trim();
@@ -14,6 +15,28 @@ export const loginSchema = z.object({
         .toLowerCase(),
     password: z.string()
         .min(1, 'La contraseña es obligatoria')
+});
+
+export const completeInstitutionsSchema = z.object({
+    instituciones_ids: z.preprocess(
+        (value) => {
+            if (typeof value !== 'string') {
+                return value;
+            }
+
+            try {
+                return JSON.parse(value);
+            } catch {
+                return value;
+            }
+        },
+        z.array(
+            z.string().uuid('UUID de institución inválido'),
+            { message: 'Debes enviar un arreglo de IDs de instituciones' }
+        )
+            .min(1, 'Debes seleccionar al menos una institución')
+            .max(50, 'No puedes seleccionar más de 50 instituciones')
+    )
 });
 
 export const registerSchema = z.object({
@@ -41,26 +64,29 @@ export const registerSchema = z.object({
         .or(z.literal(''))
         .transform(val => val === '' ? undefined : val),
         
-    password: z.string()
-        .min(8, 'La contraseña debe tener al menos 8 caracteres')
-        .regex(/^(?=.*[A-Z])(?=.*\d).{8,}$/, 'La contraseña debe incluir al menos una letra mayúscula y un número'),
+    password: passwordSchema,
         
     confirmPassword: z.string()
         .min(1, 'Debe confirmar su contraseña'),
 
-    // Procesa array, JSON string o UUID único enviado desde FormData
-    instituciones_ids: z.union([
-        z.array(z.string().uuid('UUID de institución inválido')),
-        z.string().transform((val, ctx) => {
-            try {
-                const parsed = JSON.parse(val);
-                if (Array.isArray(parsed)) return parsed;
-                return [val];
-            } catch {
-                return [val];
+    instituciones_ids: z.preprocess(
+        (val) => {
+            if (!val) return undefined;
+            if (Array.isArray(val)) return val;
+            if (typeof val === 'string') {
+                try {
+                    const parsed = JSON.parse(val);
+                    return Array.isArray(parsed) ? parsed : [val];
+                } catch {
+                    return [val];
+                }
             }
-        })
-    ]).optional()
+            return val;
+        },
+        z.array(z.string().uuid('UUID de institución inválido'), {
+            message: 'Debes seleccionar al menos una institución para registrarte'
+        }).min(1, 'Debes seleccionar al menos una institución para registrarte')
+    )
 }).refine((data) => data.password === data.confirmPassword, {
     message: 'Las contraseñas no coinciden',
     path: ['confirmPassword']
