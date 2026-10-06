@@ -2,8 +2,6 @@ import DbPg from '../database/db-pg.js';
 
 class NotificacionesRepository {
 
-    db = new DbPg();
-
     create = async (data: {
         usuario_id: string;
         publicacion_id?: string | null;
@@ -34,7 +32,7 @@ class NotificacionesRepository {
             RETURNING *
         `;
 
-        return await this.db.queryOne(sql, [
+        return await DbPg.queryOne(sql, [
             data.usuario_id,
             data.publicacion_id ?? null,
             data.tipo,
@@ -64,7 +62,7 @@ class NotificacionesRepository {
             ORDER BY created_at DESC
         `;
 
-        return await this.db.queryAll(
+        return await DbPg.queryAll(
             sql,
             [usuarioId]
         );
@@ -87,7 +85,7 @@ class NotificacionesRepository {
         RETURNING *
     `;
 
-        return await this.db.queryOne(sql, [
+        return await DbPg.queryOne(sql, [
             notificacionId,
             usuarioId
         ]);
@@ -109,14 +107,12 @@ class NotificacionesRepository {
         RETURNING id
     `;
 
-        return await this.db.queryAll(sql, [
+        return await DbPg.queryAll(sql, [
             usuarioId
         ]);
 
     };
 
 }
-
-
 
 export default new NotificacionesRepository();
