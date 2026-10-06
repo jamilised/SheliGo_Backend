@@ -27,21 +27,22 @@ class PublicacionesService {
         return publicacion;
     };
 
-    getRecentPublicaciones = async () => {
-        const publicaciones = await this.repository.getRecent();
+    // Publicaciones activas más recientes de las instituciones del usuario
+    getRecentPublicaciones = async (usuarioId: string) => {
+        const publicaciones = await this.repository.getRecent(usuarioId);
         if (publicaciones === null) {
             throw new AppError('Error al recuperar las publicaciones recientes', 500);
         }
         return publicaciones.map((pub: any) => {
-            pub.foto_principal_url = StorageHelper.buildUrl(pub.foto_principal_url);
+            pub.foto_principal_url = StorageHelper.buildOptionalUrl(pub.foto_principal_url);
             return pub;
         });
     };
 
     searchPublicaciones = async (filtros: {
         busqueda?: string | undefined;
-        categoria_id?: string | undefined;
-        institucion_id?: string | undefined;
+        categoria_id?: string[] | undefined;
+        institucion_id?: string[] | undefined;
         lugar_institucion?: string | undefined;
         fecha_desde?: string | undefined;
         fecha_hasta?: string | undefined;
@@ -56,7 +57,7 @@ class PublicacionesService {
         }
 
         return publicaciones.map((pub: any) => {
-            pub.foto_principal_url = StorageHelper.buildUrl(pub.foto_principal_url);
+            pub.foto_principal_url = StorageHelper.buildOptionalUrl(pub.foto_principal_url);
             return pub;
         });
     };
@@ -405,7 +406,7 @@ updatePublicacion = async (id: string, body: any, files: any, usuarioId: string)
         }
 
         return publicaciones.map((pub: any) => {
-            pub.foto_principal_url = StorageHelper.buildUrl(pub.foto_principal_url);
+            pub.foto_principal_url = StorageHelper.buildOptionalUrl(pub.foto_principal_url);
             return pub;
         });
     };

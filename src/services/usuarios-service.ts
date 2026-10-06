@@ -1,7 +1,6 @@
 import UsuariosRepository from '../repositories/usuarios-repository.js';
 import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
-import path from "path";
 import bcrypt from 'bcrypt';
 import { BCRYPT_SALT_ROUNDS } from '../configs/security-config.js';
 
@@ -76,16 +75,8 @@ class UsuariosService {
         /* ¿Subió una foto nueva? */
         if (archivo) {
 
-            const extensionesPermitidas = [".jpg", ".jpeg", ".png", ".jfif"];
-            const extension = path.extname(archivo.originalname).toLowerCase();
-
-            if (!extensionesPermitidas.includes(extension)) {
-                throw new AppError(
-                    "Formato de imagen no permitido. Solo se permiten JPG, JPEG, PNG y JFIF.",
-                    400
-                );
-            }
-
+            // El tipo de archivo ya lo valida upload-middleware (JPEG, PNG o WEBP)
+            // y sharp lo convierte siempre a JPEG.
             const ruta = await StorageHelper.optimizarYSubir(
                 archivo.buffer,
                 "usuarios",
@@ -98,13 +89,13 @@ class UsuariosService {
             );
 
             if (!ruta) {
-                throw new AppError("No se pudo subir la imagen.", 500);
+                throw new AppError("No se pudo subir la imagen.", 502);
             }
 
             fotoFinal = ruta;
 
         } else if (body.eliminarFoto) {
-            fotoFinal = "usuarios/default.png";
+            fotoFinal = StorageHelper.DEFAULT_USER_PHOTO;
         }
 
         const nombreFinal = body.nombre ?? usuario.nombre;

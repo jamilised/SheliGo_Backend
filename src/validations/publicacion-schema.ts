@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const getPublicacionSchema = z.object({
-    id: z.string().uuid()
+    id: z.string().uuid('El ID de la publicación no es válido')
 });
 
 const fechaValidacion = z.string()
@@ -17,10 +17,22 @@ const fechaValidacion = z.string()
     })
     .optional();
 
+/*
+Lista de UUID separada por comas (?categoria_id=a,b,c), que es como la envía
+el frontend al seleccionar varios filtros. Un único id también es válido.
+*/
+const uuidListSchema = (mensaje: string) =>
+    z.string()
+        .transform((valor) =>
+            valor.split(',').map((id) => id.trim()).filter(Boolean)
+        )
+        .pipe(z.array(z.string().uuid(mensaje)).max(50, 'Demasiados filtros seleccionados'))
+        .optional();
+
 export const searchPublicacionSchema = z.object({
     busqueda: z.string().trim().max(100, 'La búsqueda no puede superar 100 caracteres').optional(),
-    categoria_id: z.string().uuid('ID de categoría inválido').optional(),
-    institucion_id: z.string().uuid('ID de institución inválido').optional(),
+    categoria_id: uuidListSchema('ID de categoría inválido'),
+    institucion_id: uuidListSchema('ID de institución inválido'),
     lugar_institucion: z.string().trim().max(100, 'El lugar no puede superar 100 caracteres').optional(),
     fecha_desde: fechaValidacion,
     fecha_hasta: fechaValidacion,

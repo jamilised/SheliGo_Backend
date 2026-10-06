@@ -19,9 +19,10 @@ const DBConfig = {
     password : process.env.DB_PASSWORD ?? '',
     port     : Number(process.env.DB_PORT) || 5432,
 
-    ssl: {
-        rejectUnauthorized: false
-    },
+    // SSL activado por defecto (Supabase). DB_SSL=false permite usar un Postgres local.
+    ssl: process.env.DB_SSL === 'false'
+        ? false
+        : { rejectUnauthorized: false },
     max: positiveIntegerFromEnv('DB_POOL_MAX', 10),
     idleTimeoutMillis: positiveIntegerFromEnv('DB_POOL_IDLE_TIMEOUT_MS', 30000),
     connectionTimeoutMillis: positiveIntegerFromEnv('DB_POOL_CONNECTION_TIMEOUT_MS', 2000)

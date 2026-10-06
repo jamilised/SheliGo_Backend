@@ -262,6 +262,7 @@ class UsuariosRepository {
         const sql = `
         INSERT INTO usuarios_instituciones (fecha_union, usuario_id, institucion_id)
         VALUES ${valueTuples}
+        ON CONFLICT DO NOTHING
     `;
 
         if (client) {

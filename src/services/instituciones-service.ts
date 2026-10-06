@@ -23,7 +23,7 @@ class InstitucionesService {
         }
 
         const institucionesConUrlCompleta = instituciones.map((inst: any) => {
-            inst.foto = StorageHelper.buildUrl(inst.foto);
+            inst.foto = StorageHelper.buildOptionalUrl(inst.foto);
             return inst;
         });
 
@@ -38,7 +38,7 @@ class InstitucionesService {
         }
 
         return instituciones.map((inst: any) => {
-            inst.foto = StorageHelper.buildUrl(inst.foto);
+            inst.foto = StorageHelper.buildOptionalUrl(inst.foto);
             return inst;
         });
     };

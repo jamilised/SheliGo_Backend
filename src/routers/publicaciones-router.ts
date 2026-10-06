@@ -2,7 +2,12 @@ import { Router } from 'express';
 import publicacionesController from '../controllers/publicaciones-controller.js';
 import { authMiddleware } from '../middlewares/auth-middleware.js';
 import { validateQuery, validateBody } from '../middlewares/validation-middleware.js';
-import { searchPublicacionSchema, createPublicacionSchema, updatePublicacionSchema } from '../validations/publicacion-schema.js';
+import {
+    searchPublicacionSchema,
+    createPublicacionSchema,
+    updatePublicacionSchema,
+    getPublicacionSchema
+} from '../validations/publicacion-schema.js';
 import {
     createPreguntaSchema,
     createRespuestaSchema,
@@ -22,8 +27,8 @@ router.get(
     validateQuery(searchPublicacionSchema),
     publicacionesController.search
 );
-router.get('/:id', authMiddleware, publicacionesController.getDetalle);
-router.get('/:id/archivos', authMiddleware, publicacionesController.getArchivos);
+router.get('/:id', authMiddleware, validateParams(getPublicacionSchema), publicacionesController.getDetalle);
+router.get('/:id/archivos', authMiddleware, validateParams(getPublicacionSchema), publicacionesController.getArchivos);
 router.get(
     '/:id/preguntas',
     authMiddleware,
@@ -45,10 +50,10 @@ router.post(
     publicacionesController.createRespuesta
 );
 
-router.patch("/:id/recuperar", authMiddleware, publicacionesController.marcarRecuperada);
+router.patch("/:id/recuperar", authMiddleware, validateParams(getPublicacionSchema), publicacionesController.marcarRecuperada);
 
-router.delete("/:id", authMiddleware, publicacionesController.remove);
-router.put("/:id", authMiddleware, upload.array("imagenes", 5), validateBody(updatePublicacionSchema), publicacionesController.update);
+router.delete("/:id", authMiddleware, validateParams(getPublicacionSchema), publicacionesController.remove);
+router.put("/:id", authMiddleware, validateParams(getPublicacionSchema), upload.array("imagenes", 5), validateBody(updatePublicacionSchema), publicacionesController.update);
 
 router.post("/", authMiddleware, upload.array("imagenes", 5), validateBody(createPublicacionSchema), publicacionesController.create);
 

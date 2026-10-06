@@ -257,16 +257,19 @@ class PublicacionesRepository {
         return await this.db.queryOne(sql, [id]);
     };
 
-    getRecent = async () => {
+    // Publicaciones activas más recientes de las instituciones a las que pertenece el usuario
+    getRecent = async (usuarioId: string) => {
         const sql = `
             SELECT 
                 p.id, 
                 p.nombre, 
                 p.descripcion, 
                 p.fecha_evento,
+                p.created_at,
                 p.tipo, 
                 p.estado,
                 p.lugar_institucion,
+                p.institucion_id,
                 i.nombre AS institucion_nombre,
                 i.direccion AS institucion_direccion,
                 a.url AS foto_principal_url,
@@ -282,10 +285,15 @@ class PublicacionesRepository {
                 LIMIT 1
             ) a ON true
             WHERE p.estado = 'activa'
-            ORDER BY p.fecha_evento DESC 
-            LIMIT 15
+              AND p.institucion_id IN (
+                  SELECT ui.institucion_id
+                  FROM usuarios_instituciones ui
+                  WHERE ui.usuario_id = $1
+              )
+            ORDER BY p.fecha_evento DESC, p.created_at DESC
+            LIMIT 20
         `;
-        return await this.db.queryAll(sql);
+        return await this.db.queryAll(sql, [usuarioId]);
     };
 
     // Soft delete: Cambia el estado a 'eliminada'
@@ -312,8 +320,8 @@ class PublicacionesRepository {
 
     search = async (filtros: {
         busqueda?: string | undefined;
-        categoria_id?: string | undefined;
-        institucion_id?: string | undefined;
+        categoria_id?: string[] | undefined;
+        institucion_id?: string[] | undefined;
         lugar_institucion?: string | undefined;
         fecha_desde?: string | undefined;
         fecha_hasta?: string | undefined;
@@ -326,9 +334,12 @@ class PublicacionesRepository {
             p.nombre, 
             p.descripcion, 
             p.fecha_evento,
+            p.created_at,
             p.tipo, 
             p.estado,
             p.lugar_institucion,
+            p.institucion_id,
+            p.categoria_id,
             i.nombre AS institucion_nombre,
             i.direccion AS institucion_direccion,
             c.nombre AS categoria_nombre,
@@ -377,14 +388,14 @@ class PublicacionesRepository {
             paramIndex++;
         }
 
-        if (filtros.categoria_id) {
-            sql += ` AND p.categoria_id = $${paramIndex}`;
+        if (filtros.categoria_id && filtros.categoria_id.length > 0) {
+            sql += ` AND p.categoria_id = ANY($${paramIndex}::uuid[])`;
             values.push(filtros.categoria_id);
             paramIndex++;
         }
 
-        if (filtros.institucion_id) {
-            sql += ` AND p.institucion_id = $${paramIndex}`;
+        if (filtros.institucion_id && filtros.institucion_id.length > 0) {
+            sql += ` AND p.institucion_id = ANY($${paramIndex}::uuid[])`;
             values.push(filtros.institucion_id);
             paramIndex++;
         }
@@ -413,7 +424,7 @@ class PublicacionesRepository {
             paramIndex++;
         }
 
-        sql += ` ORDER BY p.fecha_evento DESC`;
+        sql += ` ORDER BY p.fecha_evento DESC, p.created_at DESC`;
         return await this.db.queryAll(sql, values);
     };
 
@@ -461,9 +472,11 @@ class PublicacionesRepository {
             p.nombre,
             p.descripcion,
             p.fecha_evento,
+            p.created_at,
             p.tipo,
             p.estado,
             p.lugar_institucion,
+            p.institucion_id,
             c.nombre AS categoria_nombre,
             i.nombre AS institucion_nombre,
             i.direccion AS institucion_direccion,

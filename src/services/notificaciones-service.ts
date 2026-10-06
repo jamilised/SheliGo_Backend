@@ -16,10 +16,17 @@ class NotificacionesService {
         contenido: string;
     }) => {
 
-        const notificacion =
-            await this.repository.create(data);
-
-        return notificacion;
+        // Las notificaciones son un efecto secundario: si fallan no deben
+        // romper la acción principal (crear pregunta, enviar mensaje, etc.).
+        try {
+            return await this.repository.create(data);
+        } catch (error) {
+            console.error(
+                `No se pudo crear la notificación "${data.tipo}" para el usuario ${data.usuario_id}.`,
+                error
+            );
+            return null;
+        }
 
     };
 

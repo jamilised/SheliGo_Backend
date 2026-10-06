@@ -32,6 +32,10 @@ class AuthService {
             { expiresIn: '1d' }
         );
 
+        // El frontend filtra Home y Búsqueda por las instituciones del usuario,
+        // así que deben viajar en la respuesta del login.
+        const instituciones = (await this.usuariosRepo.getInstitucionesByUsuarioId(usuario.id)) || [];
+
         return {
             token,
             usuario: {
@@ -39,7 +43,8 @@ class AuthService {
                 nombre: usuario.nombre,
                 apellido: usuario.apellido,
                 email: usuario.email,
-                foto: usuario.foto
+                foto: StorageHelper.buildUrl(usuario.foto),
+                instituciones
             }
         };
     };
@@ -133,11 +138,17 @@ class AuthService {
         let usuarioLocal = await this.usuariosRepo.getById(user.id);
         let esNuevoUsuario = false;
 
-        if (!usuarioLocal && user.email) {
-            usuarioLocal = await this.usuariosRepo.getByEmail(user.email);
+        const emailGoogle = user.email?.toLowerCase().trim();
+
+        if (!usuarioLocal && emailGoogle) {
+            usuarioLocal = await this.usuariosRepo.getByEmail(emailGoogle);
         }
 
         if (!usuarioLocal) {
+            if (!emailGoogle) {
+                throw new AppError('La cuenta de Google no tiene un correo electrónico asociado.', 400);
+            }
+
             esNuevoUsuario = true;
             const fullName = (user.user_metadata?.full_name || user.user_metadata?.name || 'Usuario Google').trim();
             let primerNombre = fullName;
@@ -153,7 +164,7 @@ class AuthService {
                 id: user.id,
                 nombre: primerNombre,
                 apellido: elApellido,
-                email: user.email!,
+                email: emailGoogle,
                 telefono: null,
                 rol: 'user',
                 password_hash: null
@@ -181,7 +192,7 @@ class AuthService {
                 apellido: usuarioLocal.apellido,
                 email: usuarioLocal.email,
                 rol: usuarioLocal.rol,
-                foto: usuarioLocal.foto || 'usuarios/default.png',
+                foto: StorageHelper.buildUrl(usuarioLocal.foto),
                 instituciones
             }
         };

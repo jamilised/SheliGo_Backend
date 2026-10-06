@@ -16,7 +16,10 @@ const authLimiter = rateLimit({
 
     windowMs: 15 * 60 * 1000,
 
-    max: 5,
+    // Solo cuentan los intentos fallidos: un login correcto no consume el cupo
+    max: 10,
+
+    skipSuccessfulRequests: true,
 
     standardHeaders: true,
 
@@ -30,7 +33,7 @@ const authLimiter = rateLimit({
 
 });
 
-// POST /api/auth/register -> Valida con Zod, atrapa los archivos con Multer y registra
+// POST /auth/register -> Valida con Zod, atrapa los archivos con Multer y registra
 router.post(
     '/register', 
     authLimiter,
@@ -39,7 +42,7 @@ router.post(
     authController.register
 );
 
-// POST /api/auth/login -> Primero valida los datos con Zod, luego va al controller
+// POST /auth/login -> Primero valida los datos con Zod, luego va al controller
 router.post(
     '/login', 
     authLimiter,

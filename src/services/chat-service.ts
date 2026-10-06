@@ -17,8 +17,13 @@ class ChatService {
 
     // Obtener la lista de chats/salas de un usuario (con filtros y/o búsqueda)
     obtenerMisSalas = async (usuarioId: string, filtro?: string, busqueda?: string) => {
-        console.log(`⚡ SERVICIO CHAT: Buscando salas para ${usuarioId}. Filtro: ${filtro || 'ninguno'}, Busqueda: ${busqueda || 'ninguna'}`);
-        return await this.chatRepo.getSalasPorUsuario(usuarioId, filtro, busqueda);
+        const salas = await this.chatRepo.getSalasPorUsuario(usuarioId, filtro, busqueda) ?? [];
+
+        // Devolvemos URLs completas para que el cliente no dependa del nombre del bucket
+        return salas.map((sala: any) => ({
+            ...sala,
+            otro_usuario_foto: StorageHelper.buildUrl(sala.otro_usuario_foto)
+        }));
     };
 
     // Obtener o Crear una sala entre el usuario logueado y otro usuario
@@ -26,11 +31,6 @@ class ChatService {
         usuarioLogueadoId: string,
         otroUsuarioId: string
     ) => {
-
-        console.log(
-            `⚡ SERVICIO CHAT: Buscando o creando sala entre ${usuarioLogueadoId} y ${otroUsuarioId}`
-        );
-
         // 🚨 VALIDACIÓN 1: Sintaxis de UUID de ambos usuarios
         if (
             !this.esUUIDValido(usuarioLogueadoId) ||
@@ -73,20 +73,12 @@ class ChatService {
         // Si ya existe, simplemente devolvemos la sala.
         // NO generamos una nueva notificación.
         if (salaExistente) {
-
-            console.log(
-                `ℹ️ Ya existe la sala: ${salaExistente.sala_id}`
-            );
-
             return {
                 sala_id: salaExistente.sala_id
             };
         }
 
         // 2. Crear una nueva sala
-        console.log(
-            `✨ No existe sala común. Creando sala nueva...`
-        );
 
         const nuevaSala =
             await this.chatRepo.crearSala();
@@ -136,7 +128,6 @@ class ChatService {
 
     // Obtener el historial de mensajes de una sala y marcarlos como leídos
     obtenerMensajesSala = async (salaId: string, usuarioId: string) => {
-        console.log(`⚡ SERVICIO CHAT: Cargando mensajes para la sala ${salaId}`);
 
         if (!this.esUUIDValido(salaId)) {
             throw new AppError('El ID de la sala no es válido.', 400);
@@ -150,7 +141,14 @@ class ChatService {
         // 🚀 MAGIA: En segundo plano marcamos los mensajes que recibió este usuario como leídos
         await this.chatRepo.marcarMensajesComoLeidos(salaId, usuarioId);
 
-        return await this.chatRepo.getMensajesPorSala(salaId);
+        const mensajes = await this.chatRepo.getMensajesPorSala(salaId) ?? [];
+
+        // Las fotos se guardan como ruta relativa ("chats/..."): agregamos su URL pública
+        return mensajes.map((mensaje: any) => (
+            typeof mensaje.contenido === 'string' && mensaje.contenido.startsWith('chats/')
+                ? { ...mensaje, contenido_url: StorageHelper.buildUrl(mensaje.contenido) }
+                : mensaje
+        ));
     };
 
     // Guardar un mensaje nuevo enviado por el usuario
@@ -160,7 +158,6 @@ class ChatService {
         contenido?: string,
         archivoFoto?: Express.Multer.File
     ) => {
-        console.log(`⚡ SERVICIO CHAT: Guardando nuevo mensaje en sala ${salaId}`);
 
         if (!this.esUUIDValido(salaId)) {
             throw new AppError('El ID de la sala no es válido.', 400);
@@ -210,9 +207,6 @@ class ChatService {
                 salaId
             ) ?? [];
 
-        console.log("👥 PARTICIPANTES:", participantes);
-        console.log("👤 EMISOR:", emisorId);
-
         for (const participante of participantes) {
 
             if (participante.usuario_id === emisorId) {
@@ -250,7 +244,6 @@ class ChatService {
 
     // Eliminar un mensaje validando que el emisor sea el dueño
     eliminarMensaje = async (mensajeId: string, usuarioId: string) => {
-        console.log(`⚡ SERVICIO CHAT: Intentando eliminar mensaje ${mensajeId} por usuario ${usuarioId}`);
 
         if (!this.esUUIDValido(mensajeId)) {
             throw new AppError('El ID del mensaje no es válido.', 400);

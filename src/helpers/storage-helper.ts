@@ -57,9 +57,28 @@ export class StorageHelper {
         }
     };
 
+    static readonly DEFAULT_USER_PHOTO = 'usuarios/default.png';
+
+    /**
+     * Construye la URL pública de un objeto del bucket.
+     * - Si la ruta ya es una URL absoluta (p. ej. avatar de Google) se devuelve tal cual.
+     * - Si no hay ruta, usa la foto por defecto de usuario.
+     */
     static buildUrl(relativePath: string | null | undefined): string {
-        const objectPath = relativePath || 'usuarios/default.png';
+        const objectPath = relativePath || this.DEFAULT_USER_PHOTO;
+        if (/^https?:\/\//i.test(objectPath)) {
+            return objectPath;
+        }
         return `${this.getSupabaseUrl()}/storage/v1/object/public/${this.getBucketName()}/${objectPath}`;
+    }
+
+    /**
+     * Igual que buildUrl, pero devuelve null cuando no hay archivo.
+     * Se usa para imágenes de publicaciones e instituciones, que no deben
+     * caer en la foto por defecto de usuario.
+     */
+    static buildOptionalUrl(relativePath: string | null | undefined): string | null {
+        return relativePath ? this.buildUrl(relativePath) : null;
     }
 
     static optimizarYSubir = async (

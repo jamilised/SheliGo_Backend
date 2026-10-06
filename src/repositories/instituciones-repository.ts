@@ -17,7 +17,6 @@ class InstitucionesRepository {
 
     // Traemos las instituciones más recientes
     getRecent = async () => {
-        console.log('EJECUTANDO: getRecent en InstitucionesRepository');
 
         const sql = `
             SELECT 

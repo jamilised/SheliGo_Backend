@@ -2,14 +2,15 @@ import type { Request, Response, NextFunction } from 'express';
 import publicacionesService from '../services/publicaciones-service.js';
 import preguntasService from '../services/preguntas-service.js';
 import archivosService from '../services/archivos-service.js';
-import { searchPublicacionSchema } from '../validations/publicacion-schema.js';
+import type { z } from 'zod';
+import type { searchPublicacionSchema } from '../validations/publicacion-schema.js';
 
 const getRecientes = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('⚡ CONTROLLER PUB: Obteniendo recientes');
-
         const publicaciones =
-            await publicacionesService.getRecentPublicaciones();
+            await publicacionesService.getRecentPublicaciones(
+                res.locals.userIdLogged
+            );
 
         return res.status(200).json({
             status: 'success',
@@ -22,9 +23,8 @@ const getRecientes = async (req: Request, res: Response, next: NextFunction) => 
 
 const search = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('⚡ CONTROLLER PUB: Iniciando búsqueda filtrada');
-
-        const filtros = searchPublicacionSchema.parse(res.locals.validatedQuery);
+        // validateQuery ya validó y transformó la query
+        const filtros = res.locals.validatedQuery as z.infer<typeof searchPublicacionSchema>;
         const publicaciones =
             await publicacionesService.searchPublicaciones(
                 filtros
@@ -213,20 +213,6 @@ const update = async (
     next: NextFunction
 ) => {
     try {
-        console.log(
-            "🚀 LLEGÓ PETICIÓN AL CONTROLLER DE UPDATE!"
-        );
-
-        console.log(
-            "Params ID:",
-            req.params.id
-        );
-
-        console.log(
-            "Body recibido:",
-            req.body
-        );
-
         const id = req.params.id as string;
 
         const usuarioId =
