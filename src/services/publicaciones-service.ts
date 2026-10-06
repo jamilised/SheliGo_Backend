@@ -69,13 +69,10 @@ class PublicacionesService {
             mime_type: string;
             es_principal: boolean;
         }> = [];
-        const rutasIntentadas: string[] = [];
-
         try {
             for (let i = 0; i < (files?.length ?? 0); i++) {
                 const archivo = files[i];
                 const nombreArchivo = `${publicacionId}_${i}.jpg`;
-                rutasIntentadas.push(`publicaciones/${nombreArchivo}`);
 
                 const ruta = await StorageHelper.optimizarYSubir(
                     archivo.buffer,
@@ -110,17 +107,20 @@ class PublicacionesService {
 
             return publicacion;
         } catch (error) {
-            try {
-                await StorageHelper.eliminarObjetos(rutasIntentadas);
-            } catch (cleanupError) {
-                console.error('Falló la creación de la publicación y no se pudieron limpiar las imágenes.', {
-                    error,
-                    cleanupError
-                });
-                throw new AppError(
-                    'No se pudo completar la publicación ni limpiar sus imágenes. Contacta con soporte.',
-                    502
-                );
+            // Solo se limpian las imágenes que efectivamente se subieron.
+            // Si la limpieza falla quedan archivos huérfanos, pero no debe
+            // ocultar el error original que se le informa al usuario.
+            const rutasSubidas = archivosSubidos.map((archivo) => archivo.url);
+            if (rutasSubidas.length > 0) {
+                try {
+                    await StorageHelper.eliminarObjetos(rutasSubidas);
+                } catch (cleanupError) {
+                    console.error(
+                        'Falló la creación de la publicación y no se pudieron limpiar sus imágenes:',
+                        rutasSubidas,
+                        cleanupError
+                    );
+                }
             }
 
             throw error;
@@ -243,7 +243,6 @@ updatePublicacion = async (id: string, body: any, files: any, usuarioId: string)
             for (let i = 0; i < (files?.length ?? 0); i++) {
                 const archivo = files[i];
                 const nombreArchivo = `${id}_${randomUUID()}.jpg`;
-                rutasNuevas.push(`publicaciones/${nombreArchivo}`);
 
                 const ruta = await StorageHelper.optimizarYSubir(
                     archivo.buffer,
@@ -256,6 +255,7 @@ updatePublicacion = async (id: string, body: any, files: any, usuarioId: string)
                         502
                     );
                 }
+                rutasNuevas.push(ruta);
 
                 archivosNuevos.push({
                     url: ruta,
@@ -336,13 +336,11 @@ updatePublicacion = async (id: string, body: any, files: any, usuarioId: string)
                 try {
                     await StorageHelper.eliminarObjetos(rutasNuevas);
                 } catch (cleanupError) {
+                    // No ocultamos el error original: solo quedan archivos huérfanos
                     console.error(
-                        `No se pudieron limpiar las imágenes nuevas de la publicación ${id}.`,
-                        { error, cleanupError }
-                    );
-                    throw new AppError(
-                        'No se pudo completar la actualización ni limpiar las imágenes nuevas. Contacta con soporte.',
-                        502
+                        `No se pudieron limpiar las imágenes nuevas de la publicación ${id}:`,
+                        rutasNuevas,
+                        cleanupError
                     );
                 }
             }

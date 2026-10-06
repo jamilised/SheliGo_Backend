@@ -41,9 +41,13 @@ export const errorMiddleware = (
       : postgresError
         ? postgresError.status
         : 500;
+  // Errores controlados: 4xx y fallas de servicios externos (502/503)
+  const allowedServerStatuses = [502, 503];
   const responseStatusCode = Number.isInteger(rawStatusCode)
-    && rawStatusCode >= 400
-    && rawStatusCode < 500
+    && (
+      (rawStatusCode >= 400 && rawStatusCode < 500) ||
+      (isControlledError && allowedServerStatuses.includes(rawStatusCode))
+    )
       ? rawStatusCode
       : 500;
 

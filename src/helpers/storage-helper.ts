@@ -172,7 +172,16 @@ export class StorageHelper {
 
         }
         catch (error) {
-            console.error('No se pudo procesar o cargar el archivo.', error);
+            const causeCode = (error as { cause?: { code?: string } })?.cause?.code;
+            if (causeCode && /CERT|SELF_SIGNED|UNABLE_TO_VERIFY/.test(causeCode)) {
+                console.error(
+                    `No se pudo conectar de forma segura con Supabase Storage (${causeCode}). ` +
+                    'La red está interceptando HTTPS (proxy/antivirus). Configurá NODE_EXTRA_CA_CERTS ' +
+                    'con el certificado de la red o usá otra conexión.'
+                );
+            } else {
+                console.error('No se pudo procesar o cargar el archivo.', error);
+            }
             return null;
         }
 
