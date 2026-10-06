@@ -6,15 +6,7 @@ class UsuariosRepository {
 
     db = dbPg
 
-    // Busca un usuario por su ID
     getById = async (id: string) => {
-
-        console.log('EJECUTANDO: getById en UsuariosRepository')
-        console.log('ID USUARIO RECIBIDO:', id)
-        console.log('DB HOST:', process.env.DB_HOST)
-        console.log('DB DATABASE:', process.env.DB_DATABASE)
-        console.log('DB USER:', process.env.DB_USER)
-
         const sql = `
             SELECT 
                 id, 
@@ -28,22 +20,10 @@ class UsuariosRepository {
             WHERE id = $1
         `
 
-        const result =
-            await this.db.queryOne(sql, [id])
-
-        console.log('RESULTADO QUERY USUARIO:', result)
-
-        return result
+        return await this.db.queryOne(sql, [id])
     }
 
-    // Busca un usuario por su email para verificar duplicados
     getByEmail = async (email: string) => {
-
-        console.log(
-            'EJECUTANDO: getByEmail en UsuariosRepository para:',
-            email
-        );
-
         const sql = `
             SELECT 
                 id, 
@@ -56,19 +36,9 @@ class UsuariosRepository {
             WHERE email = $1
         `;
 
-        const result =
-            await this.db.queryOne(sql, [email]);
-
-        console.log(
-            'RESULTADO QUERY EMAIL:',
-            result ? 'Existe' : 'No existe'
-        );
-
-        return result;
+        return await this.db.queryOne(sql, [email]);
     }
 
-    // Inserta el nuevo usuario y retorna la Entidad Usuario real
-    // usuarios-repository.ts
     create = async (u: {
         id?: string;
         nombre: string;
@@ -78,7 +48,6 @@ class UsuariosRepository {
         rol: string;
         password_hash: string | null;
     }, client?: PoolClient) => {
-        // Si viene ID (Google/Supabase) lo incluimos; si no, dejamos que PostgreSQL lo genere o insertamos DEFAULT
         const sql = `
         INSERT INTO usuarios (
             ${u.id ? 'id,' : ''}
@@ -160,15 +129,10 @@ class UsuariosRepository {
         return { usuario: nuevoUsuario, instituciones: instituciones.rows };
     });
 
-    // Método para actualizar la ruta de la foto una vez generado el ID
     updateFoto = async (
         id: string,
         fotoPath: string
     ) => {
-
-        console.log(
-            `➡️ EJECUTANDO: updateFoto para ID ${id} con ruta: ${fotoPath}`
-        );
 
         const sql = `
             UPDATE usuarios
@@ -192,10 +156,6 @@ class UsuariosRepository {
         apellido: string,
         foto: string
     ) => {
-
-        console.log(
-            `EJECUTANDO: updatePerfil para ${id}`
-        );
 
         const sql = `
             UPDATE usuarios
@@ -244,8 +204,6 @@ class UsuariosRepository {
         );
     }
 
-    // Busca un usuario por ID para operaciones relacionadas
-    // con autenticación/contraseña
     async findById(id: string) {
 
         const sql = `
@@ -264,7 +222,6 @@ class UsuariosRepository {
         );
     }
 
-    // Actualiza la contraseña de un usuario
     async updatePassword(
         id: string,
         newPasswordHash: string
@@ -288,7 +245,6 @@ class UsuariosRepository {
         );
     }
 
-    // Asocia múltiples instituciones a un usuario
     asociarInstituciones = async (
         usuarioId: string,
         institucionesIds: string[],
@@ -315,7 +271,6 @@ class UsuariosRepository {
         }
     };
 
-    // Obtiene las instituciones asociadas al usuario
     getInstitucionesByUsuarioId = async (usuarioId: string) => {
         const sql = `
         SELECT 
@@ -328,13 +283,9 @@ class UsuariosRepository {
         WHERE ui.usuario_id = $1
     `;
 
-        // Usamos queryAll ya expuesto por DbPg
         return await this.db.queryAll(sql, [usuarioId]);
     };
 
-    // Agregar al final de la clase UsuariosRepository en usuarios-repository.ts
-
-    // Reemplaza todas las instituciones del usuario por la nueva lista
     reemplazarInstituciones = async (usuarioId: string, institucionesIds: string[]) => {
         await this.db.transaction(async (client) => {
             await client.query(

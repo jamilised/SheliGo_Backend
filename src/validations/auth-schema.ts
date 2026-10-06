@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { passwordSchema } from './password-schema.js';
 
 const formatearNombre = (val: string) => {
     const limpio = val.trim();
@@ -63,9 +64,7 @@ export const registerSchema = z.object({
         .or(z.literal(''))
         .transform(val => val === '' ? undefined : val),
         
-    password: z.string()
-        .min(8, 'La contraseña debe tener al menos 8 caracteres')
-        .regex(/^(?=.*[A-Z])(?=.*\d).{8,}$/, 'La contraseña debe incluir al menos una letra mayúscula y un número'),
+    password: passwordSchema,
         
     confirmPassword: z.string()
         .min(1, 'Debe confirmar su contraseña'),

@@ -3,7 +3,6 @@ import usuariosService from '../services/usuarios-service.js';
 
 const getMe = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('⚡ CONTROLLER USUARIOS: Obteniendo perfil logueado (/me)');
         const userId = res.locals.userIdLogged;
 
         const perfil = await usuariosService.getPerfil(userId);
@@ -21,8 +20,7 @@ const getMe = async (req: Request, res: Response, next: NextFunction) => {
 
 const cambiarContrasena = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const usuarioId = res.locals.userIdLogged || res.locals.userId; // 👈 Proba ambas por si tu middleware usa userId
-        console.log("🔍 BUSCANDO USUARIO CON ID:", usuarioId);
+        const usuarioId = res.locals.userIdLogged;
 
         const { contrasenaActual, nuevaContrasena } = req.body;
 
@@ -75,7 +73,6 @@ const editarPerfil = async (
 
 };
 
-// Cumple regla: Objeto con funciones flecha para Controllers
 export default {
     getMe,
     cambiarContrasena,

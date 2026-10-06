@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
 import authService from '../services/auth-service.js';
-import jwt from 'jsonwebtoken';
 import AppError from '../errors/app-error.js';
 
 const login = async (req: Request, res: Response, next: NextFunction) => {
@@ -20,8 +19,6 @@ const login = async (req: Request, res: Response, next: NextFunction) => {
 
 const register = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('CONTROLLER AUTH: Iniciando registro');
-        
         const nuevoUsuario = await authService.register(req.body, req.file);
 
         return res.status(201).json({

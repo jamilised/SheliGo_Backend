@@ -1,6 +1,9 @@
 import 'dotenv/config'
+import { validateEnvironment } from './configs/env-config.js'
 import app from './app.js'
 import dbPg from './database/db-pg.js'
+
+validateEnvironment()
 
 const PORT = Number(process.env.PORT) || 3000
 

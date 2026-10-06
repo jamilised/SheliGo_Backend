@@ -2,19 +2,22 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'node:crypto';
 import UsuariosRepository from '../repositories/usuarios-repository.js';
-import { StorageHelper } from '../helpers/storage-helper.js'; // 🚀 Usamos el helper genérico estático
+import { StorageHelper } from '../helpers/storage-helper.js';
 import AppError from '../errors/app-error.js';
+import { BCRYPT_SALT_ROUNDS, getJwtSecret } from '../configs/security-config.js';
 
 class AuthService {
     private usuariosRepo = UsuariosRepository;
 
     login = async (email: string, password: string) => {
-        console.log('⚡ SERVICIO AUTH: Iniciando login para:', email);
-
         const usuario = await this.usuariosRepo.getByEmail(
             email.toLowerCase().trim()
         );
         if (!usuario) {
+            throw new AppError('Credenciales inválidas', 401);
+        }
+
+        if (!usuario.password_hash) {
             throw new AppError('Credenciales inválidas', 401);
         }
 
@@ -25,7 +28,7 @@ class AuthService {
 
         const token = jwt.sign(
             { userId: usuario.id },
-            process.env.JWT_SECRET!,
+            getJwtSecret(),
             { expiresIn: '1d' }
         );
 
@@ -41,12 +44,9 @@ class AuthService {
         };
     };
 
-    // auth-service.ts
-
     register = async (body: any, archivoImagen?: Express.Multer.File) => {
         const { nombre, apellido, email, telefono, password, instituciones_ids } = body;
 
-        console.log('⚡ SERVICIO AUTH: Iniciando proceso de registro para:', email);
         let arrayInstituciones: string[] = [];
         if (Array.isArray(instituciones_ids)) {
             arrayInstituciones = instituciones_ids;
@@ -70,8 +70,7 @@ class AuthService {
             throw new AppError('El correo electrónico ya se encuentra registrado.', 409);
         }
 
-        const saltRounds = 12;
-        const passwordHash = await bcrypt.hash(password, saltRounds);
+        const passwordHash = await bcrypt.hash(password, BCRYPT_SALT_ROUNDS);
         const usuarioId = randomUUID();
         let fotoFinalPath = 'usuarios/default.png';
 
@@ -170,7 +169,7 @@ class AuthService {
 
         const token = jwt.sign(
             { userId: usuarioLocal.id },
-            process.env.JWT_SECRET!,
+            getJwtSecret(),
             { expiresIn: '24h' }
         );
 

@@ -3,6 +3,7 @@ import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 import path from "path";
 import bcrypt from 'bcrypt';
+import { BCRYPT_SALT_ROUNDS } from '../configs/security-config.js';
 
 class UsuariosService {
     private usuariosRepo = UsuariosRepository;
@@ -48,8 +49,7 @@ class UsuariosService {
             throw new AppError('La contraseña actual es incorrecta.', 400);
         }
 
-        const saltRounds = 10;
-        const nuevoHash = await bcrypt.hash(nuevaContrasena, saltRounds);
+        const nuevoHash = await bcrypt.hash(nuevaContrasena, BCRYPT_SALT_ROUNDS);
 
         await this.usuariosRepo.updatePassword(usuarioId, nuevoHash);
         return true;
