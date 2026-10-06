@@ -1,4 +1,6 @@
 import 'dotenv/config'
+// Debe ejecutarse antes de cualquier conexión HTTPS (Supabase)
+import './configs/tls-config.js'
 import { validateEnvironment } from './configs/env-config.js'
 import app from './app.js'
 import dbPg from './database/db-pg.js'

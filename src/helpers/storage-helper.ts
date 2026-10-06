@@ -176,8 +176,9 @@ export class StorageHelper {
             if (causeCode && /CERT|SELF_SIGNED|UNABLE_TO_VERIFY/.test(causeCode)) {
                 console.error(
                     `No se pudo conectar de forma segura con Supabase Storage (${causeCode}). ` +
-                    'La red está interceptando HTTPS (proxy/antivirus). Configurá NODE_EXTRA_CA_CERTS ' +
-                    'con el certificado de la red o usá otra conexión.'
+                    'La red está interceptando HTTPS (proxy/antivirus) y su certificado no está instalado ' +
+                    'en el sistema operativo. Usá Node 22.19+ o configurá NODE_EXTRA_CA_CERTS con el ' +
+                    'certificado de la red.'
                 );
             } else {
                 console.error('No se pudo procesar o cargar el archivo.', error);
