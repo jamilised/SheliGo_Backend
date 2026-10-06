@@ -37,10 +37,16 @@ export class StorageHelper {
         return this.storageClient;
     }
     static eliminarObjeto = async (relativePath: string): Promise<void> => {
+        await this.eliminarObjetos([relativePath]);
+    };
+
+    static eliminarObjetos = async (relativePaths: string[]): Promise<void> => {
+        if (relativePaths.length === 0) return;
+
         const { error } = await this.getStorageClient()
             .storage
             .from(this.getBucketName())
-            .remove([relativePath]);
+            .remove(relativePaths);
 
         if (error) {
             throw error;

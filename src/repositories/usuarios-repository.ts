@@ -1,5 +1,6 @@
 import dbPg from '../database/db-pg.js'
 import Usuario from '../entities/usuario.js';
+import type { PoolClient } from 'pg'
 
 class UsuariosRepository {
 
@@ -76,7 +77,7 @@ class UsuariosRepository {
         telefono: string | null;
         rol: string;
         password_hash: string | null;
-    }) => {
+    }, client?: PoolClient) => {
         // Si viene ID (Google/Supabase) lo incluimos; si no, dejamos que PostgreSQL lo genere o insertamos DEFAULT
         const sql = `
         INSERT INTO usuarios (
@@ -98,7 +99,9 @@ class UsuariosRepository {
             ? [u.id, u.nombre, u.apellido, u.email, u.telefono, u.rol, u.password_hash]
             : [u.nombre, u.apellido, u.email, u.telefono, u.rol, u.password_hash];
 
-        const res = await this.db.queryOne(sql, values);
+        const res = client
+            ? (await client.query(sql, values)).rows[0] ?? null
+            : await this.db.queryOne(sql, values);
         if (!res) return null;
 
         return new Usuario(
@@ -113,6 +116,49 @@ class UsuariosRepository {
             res.foto
         );
     }
+
+    createWithInstitutions = async (
+        usuario: {
+            id: string;
+            nombre: string;
+            apellido: string;
+            email: string;
+            telefono: string | null;
+            rol: string;
+            password_hash: string | null;
+        },
+        institucionesIds: string[],
+        fotoPath: string
+    ) => this.db.transaction(async (client) => {
+        const nuevoUsuario = await this.create(usuario, client);
+        if (!nuevoUsuario) {
+            throw new Error('No se pudo crear el usuario dentro de la transacción.');
+        }
+
+        await this.asociarInstituciones(usuario.id, institucionesIds, client);
+
+        const fotoActualizada = await client.query(
+            `UPDATE usuarios
+             SET foto = $1, updated_at = NOW()
+             WHERE id = $2
+             RETURNING foto`,
+            [fotoPath, usuario.id]
+        );
+        if (fotoActualizada.rowCount !== 1) {
+            throw new Error('No se pudo asignar la foto al usuario dentro de la transacción.');
+        }
+
+        nuevoUsuario.foto = fotoPath;
+        const instituciones = await client.query(
+            `SELECT i.id, i.nombre, i.direccion, i.foto
+             FROM instituciones i
+             JOIN usuarios_instituciones ui ON ui.institucion_id = i.id
+             WHERE ui.usuario_id = $1`,
+            [usuario.id]
+        );
+
+        return { usuario: nuevoUsuario, instituciones: instituciones.rows };
+    });
 
     // Método para actualizar la ruta de la foto una vez generado el ID
     updateFoto = async (
@@ -243,11 +289,16 @@ class UsuariosRepository {
     }
 
     // Asocia múltiples instituciones a un usuario
-    asociarInstituciones = async (usuarioId: string, institucionesIds: string[]) => {
-        if (!institucionesIds || institucionesIds.length === 0) return;
+    asociarInstituciones = async (
+        usuarioId: string,
+        institucionesIds: string[],
+        client?: PoolClient
+    ) => {
+        const idsUnicos = [...new Set(institucionesIds ?? [])];
+        if (idsUnicos.length === 0) return;
 
         const values: any[] = [usuarioId];
-        const valueTuples = institucionesIds.map((instId, index) => {
+        const valueTuples = idsUnicos.map((instId, index) => {
             values.push(instId);
             return `(CURRENT_DATE, $1, $${index + 2})`;
         }).join(', ');
@@ -257,8 +308,11 @@ class UsuariosRepository {
         VALUES ${valueTuples}
     `;
 
-        // Usamos el pool directamente para ejecutar un INSERT múltiple que no retorna filas
-        await this.db.getDBPool().query(sql, values);
+        if (client) {
+            await client.query(sql, values);
+        } else {
+            await this.db.getDBPool().query(sql, values);
+        }
     };
 
     // Obtiene las instituciones asociadas al usuario
@@ -282,14 +336,13 @@ class UsuariosRepository {
 
     // Reemplaza todas las instituciones del usuario por la nueva lista
     reemplazarInstituciones = async (usuarioId: string, institucionesIds: string[]) => {
-        // 1. Eliminamos las asociaciones anteriores
-        const sqlDelete = `DELETE FROM usuarios_instituciones WHERE usuario_id = $1`;
-        await this.db.getDBPool().query(sqlDelete, [usuarioId]);
-
-        // 2. Asociamos las nuevas si el array no está vacío
-        if (institucionesIds && institucionesIds.length > 0) {
-            await this.asociarInstituciones(usuarioId, institucionesIds);
-        }
+        await this.db.transaction(async (client) => {
+            await client.query(
+                `DELETE FROM usuarios_instituciones WHERE usuario_id = $1`,
+                [usuarioId]
+            );
+            await this.asociarInstituciones(usuarioId, institucionesIds, client);
+        });
     };
 }
 

@@ -1,7 +1,237 @@
 import dbPg from '../database/db-pg.js'
 
+type ArchivoPersistido = {
+    id: string;
+    publicacion_id: string;
+    url: string;
+    mime_type: string;
+    es_principal: boolean;
+    created_at: Date;
+};
+
 class PublicacionesRepository {
     db = dbPg;
+
+    createWithFiles = async (
+        id: string,
+        p: {
+            usuario_id: string;
+            categoria_id: string;
+            institucion_id: string | null;
+            nombre: string;
+            descripcion: string | null;
+            fecha_evento: string;
+            tipo: string;
+            lugar_institucion: string | null;
+            estado: string;
+        },
+        files: Array<{ url: string; mime_type: string; es_principal: boolean }>
+    ) => this.db.transaction(async (client) => {
+        const result = await client.query(
+            `INSERT INTO publicaciones (
+                id, usuario_id, categoria_id, institucion_id, nombre,
+                descripcion, fecha_evento, tipo, estado,
+                lugar_institucion, created_at, updated_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+            RETURNING *`,
+            [
+                id,
+                p.usuario_id,
+                p.categoria_id,
+                p.institucion_id,
+                p.nombre,
+                p.descripcion,
+                p.fecha_evento,
+                p.tipo,
+                p.estado,
+                p.lugar_institucion
+            ]
+        );
+        const publicacion = result.rows[0];
+        if (!publicacion) {
+            throw new Error('No se pudo insertar la publicación.');
+        }
+
+        for (const file of files) {
+            await client.query(
+                `INSERT INTO archivos (publicacion_id, url, mime_type, es_principal)
+                 VALUES ($1, $2, $3, $4)`,
+                [id, file.url, file.mime_type, file.es_principal]
+            );
+        }
+
+        return publicacion;
+    });
+
+    updateWithFileChanges = async (
+        id: string,
+        usuarioId: string,
+        p: {
+            categoria_id: string;
+            institucion_id: string | null;
+            nombre: string;
+            descripcion: string | null;
+            fecha_evento: string;
+            tipo: string;
+            estado: string;
+            lugar_institucion: string | null;
+        },
+        fileIdsToDelete: string[],
+        filesToAdd: Array<{ url: string; mime_type: string; es_principal: boolean }>
+    ) => this.db.transaction(async (client) => {
+        const updated = await client.query(
+            `UPDATE publicaciones
+             SET categoria_id = $1, institucion_id = $2, nombre = $3,
+                 descripcion = $4, fecha_evento = $5, tipo = $6,
+                 estado = $7, lugar_institucion = $8, updated_at = NOW()
+             WHERE id = $9 AND usuario_id = $10 AND estado != 'eliminada'
+             RETURNING *`,
+            [
+                p.categoria_id,
+                p.institucion_id,
+                p.nombre,
+                p.descripcion,
+                p.fecha_evento,
+                p.tipo,
+                p.estado,
+                p.lugar_institucion,
+                id,
+                usuarioId
+            ]
+        );
+        const publicacion = updated.rows[0];
+        if (!publicacion) return null;
+
+        let archivosEliminados: ArchivoPersistido[] = [];
+        if (fileIdsToDelete.length > 0) {
+            const deleted = await client.query<ArchivoPersistido>(
+                `DELETE FROM archivos a
+                 USING publicaciones p
+                 WHERE a.id = ANY($1::uuid[])
+                   AND a.publicacion_id = $2
+                   AND p.id = a.publicacion_id
+                   AND p.usuario_id = $3
+                 RETURNING a.id, a.publicacion_id, a.url, a.mime_type,
+                           a.es_principal, a.created_at`,
+                [fileIdsToDelete, id, usuarioId]
+            );
+            if (deleted.rowCount !== fileIdsToDelete.length) {
+                throw new Error('Los archivos a eliminar cambiaron durante la actualización.');
+            }
+            archivosEliminados = deleted.rows;
+        }
+
+        for (const file of filesToAdd) {
+            await client.query(
+                `INSERT INTO archivos (publicacion_id, url, mime_type, es_principal)
+                 VALUES ($1, $2, $3, $4)`,
+                [id, file.url, file.mime_type, file.es_principal]
+            );
+        }
+
+        const files = await client.query<ArchivoPersistido>(
+            `SELECT id, publicacion_id, url, mime_type, es_principal, created_at
+             FROM archivos
+             WHERE publicacion_id = $1
+             ORDER BY es_principal DESC, created_at ASC`,
+            [id]
+        );
+        const firstFile = files.rows[0];
+        if (firstFile && !files.rows.some((file) => file.es_principal)) {
+            await client.query(
+                `UPDATE archivos SET es_principal = true WHERE id = $1`,
+                [firstFile.id]
+            );
+            firstFile.es_principal = true;
+        }
+
+        return {
+            publicacion,
+            archivosEliminados,
+            archivos: files.rows
+        };
+    });
+
+    restoreAfterStorageFailure = async (
+        id: string,
+        original: {
+            categoria_id: string;
+            institucion_id: string | null;
+            nombre: string;
+            descripcion: string | null;
+            fecha_evento: string;
+            tipo: string;
+            estado: string;
+            lugar_institucion: string | null;
+        },
+        archivoPrincipalOriginalId: string | null,
+        archivosEliminados: ArchivoPersistido[],
+        urlsAgregadas: string[]
+    ) => this.db.transaction(async (client) => {
+        await client.query(
+            `UPDATE publicaciones
+             SET categoria_id = $1, institucion_id = $2, nombre = $3,
+                 descripcion = $4, fecha_evento = $5, tipo = $6,
+                 estado = $7, lugar_institucion = $8, updated_at = NOW()
+             WHERE id = $9`,
+            [
+                original.categoria_id,
+                original.institucion_id,
+                original.nombre,
+                original.descripcion,
+                original.fecha_evento,
+                original.tipo,
+                original.estado,
+                original.lugar_institucion,
+                id
+            ]
+        );
+
+        if (urlsAgregadas.length > 0) {
+            await client.query(
+                `DELETE FROM archivos WHERE publicacion_id = $1 AND url = ANY($2::text[])`,
+                [id, urlsAgregadas]
+            );
+        }
+
+        for (const file of archivosEliminados) {
+            const restored = await client.query(
+                `INSERT INTO archivos (
+                    id, publicacion_id, url, mime_type, es_principal, created_at
+                 )
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 ON CONFLICT (id) DO NOTHING
+                 RETURNING id`,
+                [
+                    file.id,
+                    file.publicacion_id,
+                    file.url,
+                    file.mime_type,
+                    file.es_principal,
+                    file.created_at
+                ]
+            );
+            if (restored.rowCount !== 1) {
+                throw new Error(`No se pudo restaurar el archivo ${file.id}.`);
+            }
+        }
+
+        await client.query(
+            `UPDATE archivos SET es_principal = false WHERE publicacion_id = $1`,
+            [id]
+        );
+        if (archivoPrincipalOriginalId) {
+            const principalRestaurado = await client.query(
+                `UPDATE archivos SET es_principal = true
+                 WHERE id = $1 AND publicacion_id = $2`,
+                [archivoPrincipalOriginalId, id]
+            );
+            if (principalRestaurado.rowCount !== 1) {
+                throw new Error('No se pudo restaurar la imagen principal original.');
+            }
+        }
+    });
 
     getById = async (id: string) => {
         const sql = `
