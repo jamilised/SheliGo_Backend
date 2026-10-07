@@ -43,6 +43,9 @@ class AuthService {
                 nombre: usuario.nombre,
                 apellido: usuario.apellido,
                 email: usuario.email,
+                // El rol solo sirve para que el frontend muestre u oculte el acceso
+                // al backoffice; los permisos reales se validan en /admin.
+                rol: usuario.rol,
                 foto: StorageHelper.buildUrl(usuario.foto),
                 instituciones
             }

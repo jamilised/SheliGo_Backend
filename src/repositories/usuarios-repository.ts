@@ -14,6 +14,7 @@ class UsuariosRepository {
                 apellido, 
                 email, 
                 telefono,
+                rol,
                 created_at,
                 foto
             FROM usuarios
@@ -30,6 +31,7 @@ class UsuariosRepository {
                 nombre,
                 apellido,
                 email, 
+                rol,
                 password_hash,
                 foto
             FROM usuarios 

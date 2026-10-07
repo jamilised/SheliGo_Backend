@@ -9,6 +9,7 @@ import categoriasRouter from "./routers/categorias-router.js";
 import institucionesRouter from "./routers/instituciones-router.js";
 import chatRouter from "./routers/chat-router.js";
 import notificacionesRouter from "./routers/notificaciones-router.js";
+import adminRouter from "./routers/admin-router.js";
 
 import { errorMiddleware } from "./middlewares/error-middleware.js";
 import NotFoundError from "./errors/not-found-error.js";
@@ -75,6 +76,8 @@ app.use("/instituciones", institucionesRouter);
 app.use("/publicaciones", publicacionesRouter);
 app.use("/chat", chatRouter);
 app.use("/notificaciones", notificacionesRouter);
+// Backoffice: protegido por JWT + rol leído de la base (ver admin-middleware)
+app.use("/admin", adminRouter);
 
 // Rutas inexistentes: respuesta JSON consistente en lugar del HTML por defecto
 app.use((req, _res, next) => {
