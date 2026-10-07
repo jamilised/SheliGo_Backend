@@ -16,6 +16,13 @@
 
 BEGIN;
 
+-- Si otra conexión está usando estas tablas (una transacción abierta del
+-- backend, del chat u otra pestaña del SQL Editor), no esperar para siempre:
+-- fallar a los 5 s con "lock timeout" sin aplicar nada. Mientras espera un
+-- bloqueo, la migración también frena las consultas nuevas de la app.
+-- Ver migrations/README.md para encontrar la conexión que bloquea.
+SET LOCAL lock_timeout = '5s';
+
 -- 1) Roles permitidos ---------------------------------------------------
 -- Si rol es un tipo enumerado se agrega el valor nuevo; si es texto se
 -- agrega una restricción CHECK. Así no dependemos de cómo se creó.
