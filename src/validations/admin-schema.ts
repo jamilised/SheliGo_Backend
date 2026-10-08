@@ -174,11 +174,16 @@ const categoriaNombre = z.string({ message: 'El nombre es obligatorio' })
     .max(60, 'El nombre debe tener entre 2 y 60 caracteres')
     .transform((valor) => valor.replace(/\s+/g, ' '));
 
-const categoriaDescripcion = textoNullable(255, 'La descripción no puede superar 255 caracteres');
+// categorias.descripcion es NOT NULL en la base: obligatoria
+const categoriaDescripcion = z.string({ message: 'La descripción es obligatoria' })
+    .trim()
+    .min(3, 'La descripción debe tener entre 3 y 255 caracteres')
+    .max(255, 'La descripción debe tener entre 3 y 255 caracteres')
+    .transform((valor) => valor.replace(/\s+/g, ' '));
 
 export const adminCrearCategoriaSchema = z.object({
     nombre: categoriaNombre,
-    descripcion: categoriaDescripcion.optional()
+    descripcion: categoriaDescripcion
 });
 export type AdminCrearCategoria = z.infer<typeof adminCrearCategoriaSchema>;
 

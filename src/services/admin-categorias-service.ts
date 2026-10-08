@@ -30,7 +30,7 @@ class AdminCategoriasService {
 
         return dbPg.transaction(async (client) => {
             await validarNombreLibre(client, body.nombre, null);
-            const categoria = await AdminCategoriasRepository.crear(client, id, body.nombre, body.descripcion ?? null);
+            const categoria = await AdminCategoriasRepository.crear(client, id, body.nombre, body.descripcion);
             await AuditoriaRepository.registrar(client, {
                 adminId: ctx.id,
                 accion: 'categoria.crear',
@@ -51,7 +51,7 @@ class AdminCategoriasService {
             }
 
             const nombre = body.nombre ?? actual.nombre;
-            const descripcion = body.descripcion !== undefined ? body.descripcion : actual.descripcion;
+            const descripcion = body.descripcion ?? actual.descripcion;
             if (nombre === actual.nombre && descripcion === actual.descripcion) {
                 return actual;
             }

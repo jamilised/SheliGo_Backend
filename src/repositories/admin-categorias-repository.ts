@@ -50,7 +50,7 @@ class AdminCategoriasRepository {
     // ---------- Operaciones dentro de una transacción ----------
 
     bloquear = async (client: PoolClient, id: string) => {
-        const result = await client.query<{ id: string; nombre: string; descripcion: string | null }>(
+        const result = await client.query<{ id: string; nombre: string; descripcion: string }>(
             `SELECT id, nombre, descripcion FROM categorias WHERE id = $1 FOR UPDATE`,
             [id]
         );
@@ -71,19 +71,19 @@ class AdminCategoriasRepository {
         return (result.rowCount ?? 0) > 0;
     };
 
-    crear = async (client: PoolClient, id: string, nombre: string, descripcion: string | null) => {
+    crear = async (client: PoolClient, id: string, nombre: string, descripcion: string) => {
         const result = await client.query(
-            `INSERT INTO categorias (id, nombre, descripcion)
-             VALUES ($1, $2, $3)
+            `INSERT INTO categorias (id, nombre, descripcion, created_at, updated_at)
+             VALUES ($1, $2, $3, NOW(), NOW())
              RETURNING id, nombre, descripcion`,
             [id, nombre, descripcion]
         );
         return result.rows[0];
     };
 
-    actualizar = async (client: PoolClient, id: string, nombre: string, descripcion: string | null) => {
+    actualizar = async (client: PoolClient, id: string, nombre: string, descripcion: string) => {
         const result = await client.query(
-            `UPDATE categorias SET nombre = $2, descripcion = $3
+            `UPDATE categorias SET nombre = $2, descripcion = $3, updated_at = NOW()
              WHERE id = $1
              RETURNING id, nombre, descripcion`,
             [id, nombre, descripcion]
