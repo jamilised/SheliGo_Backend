@@ -35,6 +35,13 @@ export const adminIdParamsSchema = z.object({
     id: z.string().uuid('El identificador no es válido')
 });
 
+// ---------- Dashboard ----------
+
+export const adminDashboardQuerySchema = z.object({
+    institucion_id: uuidOpcional('ID de institución inválido')
+});
+export type AdminDashboardQuery = z.infer<typeof adminDashboardQuerySchema>;
+
 // ---------- Usuarios ----------
 
 export const adminUsuariosQuerySchema = z.object({

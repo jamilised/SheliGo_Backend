@@ -2,6 +2,7 @@ import AdminRepository from '../repositories/admin-repository.js';
 import AuditoriaRepository from '../repositories/auditoria-repository.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 import AppError from '../errors/app-error.js';
+import { AdminAlcanceHelper } from '../helpers/admin-alcance-helper.js';
 import type { AdminContext } from '../types/admin-types.js';
 
 class AdminService {
@@ -37,10 +38,16 @@ class AdminService {
         };
     };
 
-    getDashboard = async (ctx: AdminContext) => {
+    /*
+    Totales, publicaciones y actividad se consultan ya filtrados en SQL por el
+    alcance del administrador. institucion_id solo puede acotarlo (403 si está
+    fuera de las instituciones que administra).
+    */
+    getDashboard = async (ctx: AdminContext, institucionId?: string) => {
+        const alcance = AdminAlcanceHelper.acotarAInstitucion(ctx, institucionId);
         const [dashboard, actividad] = await Promise.all([
-            AdminRepository.getDashboard(ctx),
-            AuditoriaRepository.getRecientes(ctx, 8)
+            AdminRepository.getDashboard(alcance),
+            AuditoriaRepository.getRecientes(alcance, 8)
         ]);
 
         return { ...dashboard, actividad_reciente: actividad };

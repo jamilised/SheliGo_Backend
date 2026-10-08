@@ -6,6 +6,7 @@ import adminPublicacionesService from '../services/admin-publicaciones-service.j
 import adminInstitucionesService from '../services/admin-instituciones-service.js';
 import adminCategoriasService from '../services/admin-categorias-service.js';
 import type {
+    AdminDashboardQuery,
     AdminListaQuery,
     AdminPublicacionesQuery,
     AdminUsuariosQuery
@@ -34,7 +35,8 @@ const getSesion = async (_req: Request, res: Response, next: NextFunction) => {
 
 const getDashboard = async (_req: Request, res: Response, next: NextFunction) => {
     try {
-        return ok(res, await adminService.getDashboard(getAdminContext(res)));
+        const { institucion_id } = res.locals.validatedQuery as AdminDashboardQuery;
+        return ok(res, await adminService.getDashboard(getAdminContext(res), institucion_id));
     } catch (error) {
         return next(error);
     }

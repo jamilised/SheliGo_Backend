@@ -2,6 +2,7 @@ import dbPg from '../database/db-pg.js';
 import AdminPublicacionesRepository from '../repositories/admin-publicaciones-repository.js';
 import AuditoriaRepository from '../repositories/auditoria-repository.js';
 import { PaginationHelper } from '../helpers/pagination-helper.js';
+import { AdminAlcanceHelper } from '../helpers/admin-alcance-helper.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 import AppError from '../errors/app-error.js';
 import type { AdminContext, EstadoPublicacion } from '../types/admin-types.js';
@@ -9,9 +10,7 @@ import type { AdminPublicacionesQuery } from '../validations/admin-schema.js';
 
 class AdminPublicacionesService {
     listar = async (ctx: AdminContext, filtros: AdminPublicacionesQuery) => {
-        if (filtros.institucion_id && !ctx.esGlobal && !ctx.institucionesIds.includes(filtros.institucion_id)) {
-            throw new AppError('No tenés permisos sobre esa institución.', 403);
-        }
+        AdminAlcanceHelper.validarInstitucion(ctx, filtros.institucion_id);
 
         const { items, total } = await AdminPublicacionesRepository.listar(ctx, filtros);
         const conFoto = items.map((p: any) => ({

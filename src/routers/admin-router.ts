@@ -10,6 +10,7 @@ import {
     adminCambiarRolSchema,
     adminCrearCategoriaSchema,
     adminCrearInstitucionSchema,
+    adminDashboardQuerySchema,
     adminEditarCategoriaSchema,
     adminEditarInstitucionSchema,
     adminIdParamsSchema,
@@ -49,7 +50,7 @@ const conId = validateParams(adminIdParamsSchema);
 
 // Sesión y dashboard
 router.get('/me', adminController.getSesion);
-router.get('/dashboard', adminController.getDashboard);
+router.get('/dashboard', validateQuery(adminDashboardQuerySchema), adminController.getDashboard);
 
 // Usuarios (lectura con alcance; cambios solo admin general)
 router.get('/usuarios', validateQuery(adminUsuariosQuerySchema), adminController.listarUsuarios);
