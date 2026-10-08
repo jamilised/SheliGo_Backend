@@ -26,30 +26,7 @@ class AuthService {
             throw new AppError('Credenciales inválidas', 401);
         }
 
-        const token = jwt.sign(
-            { userId: usuario.id },
-            getJwtSecret(),
-            { expiresIn: '1d' }
-        );
-
-        // El frontend filtra Home y Búsqueda por las instituciones del usuario,
-        // así que deben viajar en la respuesta del login.
-        const instituciones = (await this.usuariosRepo.getInstitucionesByUsuarioId(usuario.id)) || [];
-
-        return {
-            token,
-            usuario: {
-                id: usuario.id,
-                nombre: usuario.nombre,
-                apellido: usuario.apellido,
-                email: usuario.email,
-                // El rol solo sirve para que el frontend muestre u oculte el acceso
-                // al backoffice; los permisos reales se validan en /admin.
-                rol: usuario.rol,
-                foto: StorageHelper.buildUrl(usuario.foto),
-                instituciones
-            }
-        };
+        return this.armarSesion(usuario);
     };
     register = async (body: any, archivoImagen?: Express.Multer.File) => {
         const { nombre, apellido, email, telefono, password, instituciones_ids } = body;
@@ -130,7 +107,37 @@ class AuthService {
         }
     };
 
-    loginConGoogle = async (tokenSupabase: string) => {
+    /*
+    Sesión de la app (JWT propio) con los datos que el frontend necesita.
+    La comparten el login con email y el de Google.
+    */
+    private armarSesion = async (usuario: {
+        id: string;
+        nombre: string;
+        apellido: string;
+        email: string;
+        rol: string;
+        foto: string | null;
+    }) => {
+        const instituciones = (await this.usuariosRepo.getInstitucionesByUsuarioId(usuario.id)) || [];
+        const token = jwt.sign({ userId: usuario.id }, getJwtSecret(), { expiresIn: '1d' });
+
+        return {
+            token,
+            usuario: {
+                id: usuario.id,
+                nombre: usuario.nombre,
+                apellido: usuario.apellido,
+                email: usuario.email,
+                rol: usuario.rol,
+                foto: StorageHelper.buildUrl(usuario.foto),
+                instituciones
+            }
+        };
+    };
+
+    // Valida el token de Supabase (Google) y devuelve los datos de la cuenta
+    private getCuentaGoogle = async (tokenSupabase: string) => {
         const { supabase } = await import('../database/supabase.js');
 
         const { data: { user }, error } = await supabase.auth.getUser(tokenSupabase);
@@ -138,76 +145,88 @@ class AuthService {
             throw new AppError('Token de Google/Supabase inválido o expirado.', 401);
         }
 
-        let usuarioLocal = await this.usuariosRepo.getById(user.id);
-        let esNuevoUsuario = false;
-
-        const emailGoogle = user.email?.toLowerCase().trim();
-
-        if (!usuarioLocal && emailGoogle) {
-            usuarioLocal = await this.usuariosRepo.getByEmail(emailGoogle);
+        const email = user.email?.toLowerCase().trim();
+        if (!email) {
+            throw new AppError('La cuenta de Google no tiene un correo electrónico asociado.', 400);
         }
 
-        if (!usuarioLocal) {
-            if (!emailGoogle) {
-                throw new AppError('La cuenta de Google no tiene un correo electrónico asociado.', 400);
-            }
-
-            esNuevoUsuario = true;
-            const fullName = (user.user_metadata?.full_name || user.user_metadata?.name || 'Usuario Google').trim();
-            let primerNombre = fullName;
-            let elApellido = ' ';
-
-            const espacioIndex = fullName.indexOf(' ');
-            if (espacioIndex > 0) {
-                primerNombre = fullName.substring(0, espacioIndex);
-                elApellido = fullName.substring(espacioIndex + 1);
-            }
-
-            usuarioLocal = await this.usuariosRepo.create({
-                id: user.id,
-                nombre: primerNombre,
-                apellido: elApellido,
-                email: emailGoogle,
-                telefono: null,
-                rol: 'user',
-                password_hash: null
-            });
-
-            if (!usuarioLocal) {
-                throw new AppError('Error al sincronizar el usuario en la base de datos.', 500);
-            }
-        }
-
-        const instituciones = (await this.usuariosRepo.getInstitucionesByUsuarioId(usuarioLocal.id)) || [];
-
-        const token = jwt.sign(
-            { userId: usuarioLocal.id },
-            getJwtSecret(),
-            { expiresIn: '24h' }
-        );
+        const fullName = (user.user_metadata?.full_name || user.user_metadata?.name || 'Usuario Google').trim();
+        const espacioIndex = fullName.indexOf(' ');
 
         return {
-            token,
-            requiereCompletarPerfil: esNuevoUsuario || instituciones.length === 0,
-            usuario: {
-                id: usuarioLocal.id,
-                nombre: usuarioLocal.nombre,
-                apellido: usuarioLocal.apellido,
-                email: usuarioLocal.email,
-                rol: usuarioLocal.rol,
-                foto: StorageHelper.buildUrl(usuarioLocal.foto),
-                instituciones
-            }
+            id: user.id,
+            email,
+            nombre: espacioIndex > 0 ? fullName.substring(0, espacioIndex) : fullName,
+            apellido: espacioIndex > 0 ? fullName.substring(espacioIndex + 1) : ' '
         };
     };
 
-    asociarInstitucionesGoogle = async (userId: string, institucionesIds: string[]) => {
-        if (!institucionesIds || institucionesIds.length === 0) {
+    // Usuario local de una cuenta de Google: por id de Supabase o, si se registró con email, por correo
+    private getUsuarioLocalGoogle = async (cuenta: { id: string; email: string }) =>
+        (await this.usuariosRepo.getById(cuenta.id)) ?? (await this.usuariosRepo.getByEmail(cuenta.email));
+
+    /*
+    Login con Google. Solo entrega la sesión de la app a usuarios que ya
+    completaron el onboarding (tienen al menos una institución). Si no, no se
+    crea nada ni se emite token: el frontend debe pasar por
+    completarRegistroGoogle, que es donde se crea el usuario.
+    */
+    loginConGoogle = async (tokenSupabase: string) => {
+        const cuenta = await this.getCuentaGoogle(tokenSupabase);
+        const usuarioLocal = await this.getUsuarioLocalGoogle(cuenta);
+
+        if (usuarioLocal) {
+            const instituciones = (await this.usuariosRepo.getInstitucionesByUsuarioId(usuarioLocal.id)) || [];
+            if (instituciones.length > 0) {
+                return { requiereCompletarPerfil: false, ...(await this.armarSesion(usuarioLocal)) };
+            }
+        }
+
+        return {
+            requiereCompletarPerfil: true,
+            perfil: { nombre: cuenta.nombre, apellido: cuenta.apellido, email: cuenta.email }
+        };
+    };
+
+    /*
+    Último paso del registro con Google: crea el usuario (si no existía) junto
+    con sus instituciones en una sola transacción y recién entonces emite la
+    sesión. Si la persona abandona antes, no queda ningún usuario creado.
+    */
+    completarRegistroGoogle = async (tokenSupabase: string, institucionesIds: string[]) => {
+        const idsUnicos = [...new Set(institucionesIds ?? [])];
+        if (idsUnicos.length === 0) {
             throw new AppError('Debes seleccionar al menos una institución.', 400);
         }
 
-        await this.usuariosRepo.asociarInstituciones(userId, institucionesIds);
-        return await this.usuariosRepo.getInstitucionesByUsuarioId(userId);
+        const cuenta = await this.getCuentaGoogle(tokenSupabase);
+        let usuarioLocal = await this.getUsuarioLocalGoogle(cuenta);
+
+        if (usuarioLocal) {
+            // Cuenta creada antes de este cambio (sin instituciones) o que ya las tenía
+            await this.usuariosRepo.asociarInstituciones(usuarioLocal.id, idsUnicos);
+        } else {
+            try {
+                const { usuario } = await this.usuariosRepo.createWithInstitutions({
+                    id: cuenta.id,
+                    nombre: cuenta.nombre,
+                    apellido: cuenta.apellido,
+                    email: cuenta.email,
+                    telefono: null,
+                    rol: 'user',
+                    password_hash: null
+                }, idsUnicos, StorageHelper.DEFAULT_USER_PHOTO);
+                usuarioLocal = usuario;
+            } catch (error) {
+                // Doble envío del formulario: el usuario ya se creó en la otra request
+                if ((error as { code?: unknown })?.code !== '23505') throw error;
+                usuarioLocal = await this.getUsuarioLocalGoogle(cuenta);
+                if (!usuarioLocal) throw error;
+                await this.usuariosRepo.asociarInstituciones(usuarioLocal.id, idsUnicos);
+            }
+        }
+
+        return this.armarSesion(usuarioLocal);
     };
 };
 

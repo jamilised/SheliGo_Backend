@@ -52,19 +52,18 @@ const logout = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 // auth-controller.ts
+// Token de Supabase (Google) enviado como "Authorization: Bearer <token>"
+const getTokenSupabase = (req: Request): string => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        throw new AppError('No se proporcionó el token de Supabase.', 401);
+    }
+    return token;
+};
+
 const loginConGoogle = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const authHeader = req.headers.authorization;
-        const tokenSupabase = authHeader?.split(' ')[1];
-
-        if (!tokenSupabase) {
-            return res.status(401).json({ 
-                status: 'error', 
-                message: 'No se proporcionó el token de Supabase.' 
-            });
-        }
-
-        const resultado = await authService.loginConGoogle(tokenSupabase);
+        const resultado = await authService.loginConGoogle(getTokenSupabase(req));
 
         return res.status(200).json({
             status: 'success',
@@ -75,27 +74,22 @@ const loginConGoogle = async (req: Request, res: Response, next: NextFunction) =
     }
 };
 
+// Último paso del registro con Google: recién acá se crea el usuario y se emite la sesión
 const asociarInstituciones = async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
     try {
-        const userId: unknown = res.locals.userIdLogged;
-        const { instituciones_ids } = req.body;
-
-        if (typeof userId !== 'string' || !userId) {
-            return next(new AppError('Usuario no autenticado', 401));
-        }
-
-        const instituciones = await authService.asociarInstitucionesGoogle(userId, instituciones_ids);
+        const sesion = await authService.completarRegistroGoogle(
+            getTokenSupabase(req),
+            req.body.instituciones_ids
+        );
 
         return res.status(200).json({
             status: "success",
-            message: "Instituciones asociadas correctamente",
-            data: {
-                instituciones
-            }
+            message: "Registro completado",
+            data: sesion
         });
     } catch (error) {
         return next(error);

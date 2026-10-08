@@ -58,9 +58,11 @@ router.post(
 
 router.post('/google', authController.loginConGoogle);
 
+// Se autentica con el token de Supabase (Google), no con el JWT de la app:
+// el usuario recién obtiene la sesión de SheliGo al completar este paso.
 router.post(
     '/completar-instituciones', 
-    authMiddleware,
+    authLimiter,
     validateBody(completeInstitutionsSchema),
     authController.asociarInstituciones
 );
