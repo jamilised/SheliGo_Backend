@@ -110,8 +110,8 @@ class AdminInstitucionesRepository {
     crear = async (client: PoolClient, id: string, datos: InstitucionDatos) => {
         const result = await client.query(
             `INSERT INTO instituciones
-                (id, nombre, email, direccion, telefono, latitud, longitud, foto, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+                (id, nombre, email, direccion, telefono, latitud, longitud, foto, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
              RETURNING id, nombre, email, direccion, telefono, foto, latitud, longitud, created_at`,
             [id, datos.nombre, datos.email, datos.direccion, datos.telefono, datos.latitud, datos.longitud, datos.foto]
         );
@@ -122,7 +122,7 @@ class AdminInstitucionesRepository {
         const result = await client.query(
             `UPDATE instituciones
              SET nombre = $2, email = $3, direccion = $4, telefono = $5,
-                 latitud = $6, longitud = $7, foto = $8
+                 latitud = $6, longitud = $7, foto = $8, updated_at = NOW()
              WHERE id = $1
              RETURNING id, nombre, email, direccion, telefono, foto, latitud, longitud, created_at`,
             [id, datos.nombre, datos.email, datos.direccion, datos.telefono, datos.latitud, datos.longitud, datos.foto]

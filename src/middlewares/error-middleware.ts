@@ -13,7 +13,8 @@ const POSTGRES_CLIENT_ERRORS: Record<string, { status: number; message: string }
   '22008': { status: 400, message: 'La fecha enviada está fuera de rango.' },
   '23503': { status: 400, message: 'Uno de los datos relacionados (categoría, institución o usuario) no existe.' },
   '23505': { status: 409, message: 'El registro ya existe.' },
-  '23502': { status: 400, message: 'Falta un dato obligatorio.' },
+  // 23502 (NOT NULL) no se mapea: los datos del cliente ya los valida Zod, así
+  // que un NULL no permitido es un error del servidor y se responde como 500.
   '23514': { status: 400, message: 'Uno de los valores enviados no está permitido.' }
 };
 
