@@ -27,7 +27,8 @@ const search = async (req: Request, res: Response, next: NextFunction) => {
         const filtros = res.locals.validatedQuery as z.infer<typeof searchPublicacionSchema>;
         const publicaciones =
             await publicacionesService.searchPublicaciones(
-                filtros
+                filtros,
+                res.locals.userIdLogged
             );
 
         return res.status(200).json({

@@ -5,6 +5,7 @@ import { StorageHelper } from '../helpers/storage-helper.js';
 import ArchivosRepository from '../repositories/archivos-repository.js';
 import { DateHelper } from '../helpers/date-helper.js';
 import { randomUUID } from 'node:crypto';
+import UsuariosRepository from '../repositories/usuarios-repository.js';
 
 import PreguntasRepository
     from '../repositories/preguntas-repository.js';
@@ -15,6 +16,7 @@ class PublicacionesService {
     private archivosRepository = ArchivosRepository;
     private preguntasRepository = PreguntasRepository;
     private notificacionesService = NotificacionesService;
+    private usuariosRepository = UsuariosRepository;
 
     repository = PublicacionesRepository;
 
@@ -48,9 +50,21 @@ class PublicacionesService {
         fecha_hasta?: string | undefined;
         tipo?: string | undefined;
         estado?: string | undefined;
-    }) => {
+    }, usuarioId: string) => {
         DateHelper.validarRangoFechas(filtros.fecha_desde, filtros.fecha_hasta);
-        const publicaciones = await this.repository.search(filtros);
+
+        // Las instituciones elegidas en el filtro mandan. Sin selección, se usan
+        // las del usuario (comportamiento por defecto de Buscar).
+        let institucionesIds = filtros.institucion_id ?? [];
+        if (institucionesIds.length === 0) {
+            const instituciones = await this.usuariosRepository.getInstitucionesByUsuarioId(usuarioId) ?? [];
+            institucionesIds = instituciones.map((inst: { id: string }) => inst.id);
+            if (institucionesIds.length === 0) {
+                return [];
+            }
+        }
+
+        const publicaciones = await this.repository.search({ ...filtros, institucion_id: institucionesIds });
 
         if (publicaciones === null) {
             throw new AppError('Error al realizar la búsqueda de publicaciones', 500);
