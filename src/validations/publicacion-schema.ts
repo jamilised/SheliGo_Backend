@@ -106,7 +106,8 @@ export const updatePublicacionSchema = createPublicacionSchema
             .optional()
             .transform(limpiarTexto),
 
-        estado: z.enum(['activa', 'recuperada', 'eliminada'], {
+        // La baja ('eliminada') solo por DELETE /publicaciones/:id, que además notifica
+        estado: z.enum(['activa', 'recuperada'], {
             message: "Estado inválido"
         }).optional(),
 

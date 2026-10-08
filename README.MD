@@ -213,7 +213,18 @@ POST /auth/register
 POST /auth/login
 POST /auth/logout
 POST /auth/google
+POST /auth/completar-instituciones
 ```
+
+### Registro con Google
+
+1. `POST /auth/google` con `Authorization: Bearer <token de Supabase>`.
+   - Si el usuario ya tiene instituciones, responde `{ requiereCompletarPerfil: false, token, usuario }`.
+   - Si no, responde `{ requiereCompletarPerfil: true, perfil }` **sin token** y sin crear el usuario.
+2. `POST /auth/completar-instituciones` con el mismo token de Supabase y `{ instituciones_ids }`:
+   crea el usuario y sus instituciones en una sola transacción y recién ahí devuelve `{ token, usuario }`.
+
+Si la persona abandona el onboarding no queda ningún usuario creado ni sesión de SheliGo.
 
 ## Usuarios
 
@@ -235,8 +246,13 @@ POST   /publicaciones
 POST   /publicaciones/:id/preguntas
 POST   /publicaciones/preguntas/:preguntaId/respuesta
 
-DELETE /publicaciones/:id
+PUT    /publicaciones/:id               estado admite 'activa' | 'recuperada'
+PATCH  /publicaciones/:id/recuperar
+DELETE /publicaciones/:id               baja lógica (estado 'eliminada')
 ```
+
+- `GET /publicaciones/search?institucion_id=a,b`: busca en las instituciones indicadas. Sin `institucion_id` usa las instituciones del usuario logueado.
+- Estados reales (`publicaciones.estado`): `activa`, `recuperada`, `eliminada`. Tipos: `perdido`, `encontrado`.
 
 ## Categorías
 
@@ -317,7 +333,7 @@ Todas las listas aceptan `?page=1&limit=20&search=texto` (`limit` máximo 100) y
 
 ```
 GET    /admin/me                         Sesión, alcance y permisos para la interfaz
-GET    /admin/dashboard
+GET    /admin/dashboard                  ?institucion_id= (solo acota; 403 si está fuera del alcance)
 
 GET    /admin/usuarios                   ?rol=&institucion_id=
 GET    /admin/usuarios/:id
