@@ -66,13 +66,18 @@ class AdminInstitucionesService {
 
     // Solo admin general (requireGlobalAdmin en la ruta)
     crear = async (ctx: AdminContext, body: AdminCrearInstitucion, archivo?: Express.Multer.File) => {
+        // instituciones.foto es NOT NULL: el logo o foto es obligatorio en el alta
+        if (!archivo) {
+            throw new AppError('El logo o foto de la institución es obligatorio.', 400);
+        }
+
         const id = randomUUID();
-        const foto = archivo ? await subirFoto(archivo, id) : null;
+        const foto = await subirFoto(archivo, id);
 
         const datos: InstitucionDatos = {
             nombre: body.nombre,
             email: body.email ?? null,
-            direccion: body.direccion ?? null,
+            direccion: body.direccion,
             telefono: body.telefono ?? null,
             latitud: body.latitud ?? null,
             longitud: body.longitud ?? null,
@@ -110,9 +115,9 @@ class AdminInstitucionesService {
             throw new AppError('Institución no encontrada', 404);
         }
 
-        const { eliminarFoto, ...campos } = body;
+        const campos = body;
         const hayCambiosDeDatos = Object.values(campos).some((valor) => valor !== undefined);
-        if (!hayCambiosDeDatos && !archivo && !eliminarFoto) {
+        if (!hayCambiosDeDatos && !archivo) {
             throw new AppError('No se enviaron cambios', 400);
         }
 
@@ -130,11 +135,11 @@ class AdminInstitucionesService {
                 const datos: InstitucionDatos = {
                     nombre: campos.nombre ?? actual.nombre,
                     email: campos.email !== undefined ? campos.email : actual.email,
-                    direccion: campos.direccion !== undefined ? campos.direccion : actual.direccion,
+                    direccion: campos.direccion ?? actual.direccion,
                     telefono: campos.telefono !== undefined ? campos.telefono : actual.telefono,
                     latitud: campos.latitud !== undefined ? campos.latitud : actual.latitud,
                     longitud: campos.longitud !== undefined ? campos.longitud : actual.longitud,
-                    foto: fotoNueva ?? (eliminarFoto ? null : actual.foto)
+                    foto: fotoNueva ?? actual.foto
                 };
 
                 const cambios = (Object.keys(datos) as Array<keyof InstitucionDatos>)

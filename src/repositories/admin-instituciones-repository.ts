@@ -6,14 +6,15 @@ import { PaginationHelper } from '../helpers/pagination-helper.js';
 import type { AdminContext } from '../types/admin-types.js';
 import type { AdminListaQuery } from '../validations/admin-schema.js';
 
+// direccion y foto son NOT NULL en la base
 export type InstitucionDatos = {
     nombre: string;
     email: string | null;
-    direccion: string | null;
+    direccion: string;
     telefono: string | null;
     latitud: number | null;
     longitud: number | null;
-    foto: string | null;
+    foto: string;
 };
 
 // Solo columnas que la app ya usa en instituciones

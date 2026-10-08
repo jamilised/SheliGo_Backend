@@ -127,7 +127,12 @@ const institucionCampos = {
         (valor) => (typeof valor === 'string' && valor.trim() === '' ? null : valor),
         z.string().trim().toLowerCase().email('El email no es válido').max(120, 'El email es demasiado largo').nullable()
     ),
-    direccion: textoNullable(200, 'La dirección no puede superar 200 caracteres'),
+    // instituciones.direccion es NOT NULL en la base: obligatoria
+    direccion: z.string({ message: 'La dirección es obligatoria' })
+        .trim()
+        .min(3, 'La dirección debe tener entre 3 y 200 caracteres')
+        .max(200, 'La dirección debe tener entre 3 y 200 caracteres')
+        .transform((valor) => valor.replace(/\s+/g, ' ')),
     telefono: textoNullable(30, 'El teléfono no puede superar 30 caracteres'),
     latitud: coordenada(-90, 90, 'La latitud debe estar entre -90 y 90'),
     longitud: coordenada(-180, 180, 'La longitud debe estar entre -180 y 180')
@@ -145,7 +150,7 @@ const mensajeCoordenadas = {
 export const adminCrearInstitucionSchema = z.object({
     nombre: institucionCampos.nombre,
     email: institucionCampos.email.optional(),
-    direccion: institucionCampos.direccion.optional(),
+    direccion: institucionCampos.direccion,
     telefono: institucionCampos.telefono.optional(),
     latitud: institucionCampos.latitud.optional(),
     longitud: institucionCampos.longitud.optional()
@@ -158,11 +163,8 @@ export const adminEditarInstitucionSchema = z.object({
     direccion: institucionCampos.direccion.optional(),
     telefono: institucionCampos.telefono.optional(),
     latitud: institucionCampos.latitud.optional(),
-    longitud: institucionCampos.longitud.optional(),
-    eliminarFoto: z.preprocess(
-        (valor) => valor === true || valor === 'true' || valor === '1',
-        z.boolean()
-    ).optional()
+    longitud: institucionCampos.longitud.optional()
+    // Sin "eliminarFoto": instituciones.foto es NOT NULL, solo se puede reemplazar
 }).refine(coordenadasCompletas, mensajeCoordenadas);
 export type AdminEditarInstitucion = z.infer<typeof adminEditarInstitucionSchema>;
 

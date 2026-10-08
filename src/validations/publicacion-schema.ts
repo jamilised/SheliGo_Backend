@@ -89,9 +89,9 @@ export const updatePublicacionSchema = createPublicacionSchema
             .transform(valor => valor.replace(/\s+/g, " "))
             .optional(),
 
+        // publicaciones.institucion_id es NOT NULL en la base
         institucion_id: z.string()
             .uuid("La institución es inválida")
-            .nullable()
             .optional(),
 
         lugar_institucion: z.string()
