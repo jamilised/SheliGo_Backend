@@ -27,7 +27,7 @@ router.put(
 router.put(
     "/me",
     authMiddleware,
-    upload.any(),
+    upload.single("foto"),
     validateBody(updatePerfilSchema),
     usuariosController.editarPerfil
 );

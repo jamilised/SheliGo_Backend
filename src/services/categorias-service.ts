@@ -7,8 +7,6 @@ class CategoriasService {
     getAllCategorias = async () => {
         const categorias = await this.categoriasRepo.getAll();
 
-        // 🔍 Log temporal para espiar qué nos trae la base de datos
-        console.log('🔍 ¿Qué devolvió el repositorio de categorías?:', categorias);
 
         // Si es null o undefined lanzamos el error, pero permitimos arrays vacíos []
         if (categorias === null || categorias === undefined) {

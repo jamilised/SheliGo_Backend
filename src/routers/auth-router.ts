@@ -1,19 +1,25 @@
 import { Router } from 'express';
-import multer from 'multer';
 import authController from '../controllers/auth-controller.js';
 import { validateBody } from '../middlewares/validation-middleware.js';
-import { loginSchema, registerSchema } from '../validations/auth-schema.js';
+import {
+    completeInstitutionsSchema,
+    loginSchema,
+    registerSchema
+} from '../validations/auth-schema.js';
 import { authMiddleware } from '../middlewares/auth-middleware.js';
 import rateLimit from "express-rate-limit";
+import upload from "../middlewares/upload-middleware.js";
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
 
 const authLimiter = rateLimit({
 
     windowMs: 15 * 60 * 1000,
 
-    max: 100,
+    // Solo cuentan los intentos fallidos: un login correcto no consume el cupo
+    max: 10,
+
+    skipSuccessfulRequests: true,
 
     standardHeaders: true,
 
@@ -27,16 +33,16 @@ const authLimiter = rateLimit({
 
 });
 
-// POST /api/auth/register -> Valida con Zod, atrapa los archivos con Multer y registra
+// POST /auth/register -> Valida con Zod, atrapa los archivos con Multer y registra
 router.post(
     '/register', 
     authLimiter,
-    upload.any(),
+    upload.single('foto'),
     validateBody(registerSchema),
     authController.register
 );
 
-// POST /api/auth/login -> Primero valida los datos con Zod, luego va al controller
+// POST /auth/login -> Primero valida los datos con Zod, luego va al controller
 router.post(
     '/login', 
     authLimiter,
@@ -51,5 +57,14 @@ router.post(
 );
 
 router.post('/google', authController.loginConGoogle);
+
+// Se autentica con el token de Supabase (Google), no con el JWT de la app:
+// el usuario recién obtiene la sesión de SheliGo al completar este paso.
+router.post(
+    '/completar-instituciones', 
+    authLimiter,
+    validateBody(completeInstitutionsSchema),
+    authController.asociarInstituciones
+);
 
 export default router;

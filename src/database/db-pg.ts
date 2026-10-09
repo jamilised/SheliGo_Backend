@@ -1,72 +1,65 @@
 import { Pool } from 'pg'
+import type { PoolClient } from 'pg'
 import config from '../configs/db-config.js'
-import LogHelper from '../helpers/log-helper.js'
 
-export default class DbPg {
+export const pool = new Pool(config)
 
-    DBPool: Pool | null
+pool.on('error', (error) => {
+    console.error('Error inesperado en una conexión inactiva de PostgreSQL:', error)
+})
 
-    constructor() {
-        this.DBPool = null
-    }
+class DbPg {
+    getDBPool = (): Pool => pool
 
-    getDBPool = (): Pool => {
+    transaction = async <T>(operation: (client: PoolClient) => Promise<T>): Promise<T> => {
+        const client = await pool.connect()
+        let transactionStarted = false
 
-        if (this.DBPool == null) {
-            this.DBPool = new Pool(config)
+        try {
+            await client.query('BEGIN')
+            transactionStarted = true
+
+            const result = await operation(client)
+            await client.query('COMMIT')
+            transactionStarted = false
+            return result
+        } catch (error) {
+            if (transactionStarted) {
+                try {
+                    await client.query('ROLLBACK')
+                } catch (rollbackError) {
+                    throw new AggregateError(
+                        [error, rollbackError],
+                        'La transacción falló y no se pudo revertir.'
+                    )
+                }
+            }
+
+            throw error
+        } finally {
+            client.release()
         }
-
-        return this.DBPool
     }
 
     queryAll = async (sql: string, values: any[] | null = null) => {
+        const resultPg = values
+            ? await pool.query(sql, values)
+            : await pool.query(sql)
 
-        let returnArray = null
-
-        try {
-
-            const resultPg = values
-                ? await this.getDBPool().query(sql, values)
-                : await this.getDBPool().query(sql)
-
-            returnArray = resultPg.rows
-
-        } catch (error) {
-
-            if (error instanceof Error) {
-                LogHelper.logError(error)
-            }
-
-        }
-
-        return returnArray
+        return resultPg.rows
     }
 
     queryOne = async (sql: string, values: any[] | null = null) => {
+        const resultPg = values
+            ? await pool.query(sql, values)
+            : await pool.query(sql)
 
-        let returnEntity = null
+        return resultPg.rows[0] ?? null
+    }
 
-        try {
-
-            const resultPg = values
-                ? await this.getDBPool().query(sql, values)
-                : await this.getDBPool().query(sql)
-
-            if (resultPg.rows.length > 0) {
-                returnEntity = resultPg.rows[0]
-            }
-
-        } catch (error) {
-
-            console.error('ERROR REAL POSTGRES:')
-            console.error(error)
-
-            if (error instanceof Error) {
-                LogHelper.logError(error)
-            }
-
-        }
-
-        return returnEntity
+    close = async (): Promise<void> => {
+        await pool.end()
     }
 }
+
+export default new DbPg()

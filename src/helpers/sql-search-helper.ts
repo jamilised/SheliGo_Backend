@@ -11,3 +11,11 @@ export class SqlSearchHelper {
             .join(' & ');
     }
 }
+
+/**
+ * Arma un patrón seguro para ILIKE: escapa los comodines del usuario
+ * (%, _ y \) para que se busquen como texto literal.
+ * Ejemplo: "50%" => "%50\%%"
+ */
+export const buildIlikePattern = (texto: string): string =>
+    `%${texto.trim().replace(/[\\%_]/g, (caracter) => `\\${caracter}`)}%`;

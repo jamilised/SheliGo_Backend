@@ -6,6 +6,7 @@ import type {
 
 import jwt from 'jsonwebtoken'
 import AppError from '../errors/app-error.js'
+import { getJwtSecret } from '../configs/security-config.js'
 
 export const authMiddleware = (
   req: Request,
@@ -38,12 +39,14 @@ export const authMiddleware = (
       )
     }
 
-    const payload = jwt.verify(
-      token,
-      process.env.JWT_SECRET!
-    ) as jwt.JwtPayload
-
-    console.log(payload);
+    const payload = jwt.verify(token, getJwtSecret())
+    if (
+      typeof payload === 'string' ||
+      typeof payload.userId !== 'string' ||
+      payload.userId.length === 0
+    ) {
+      throw new AppError('Token inválido', 401)
+    }
 
     res.locals.userIdLogged =
       payload.userId

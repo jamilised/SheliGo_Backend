@@ -1,8 +1,8 @@
-import DbPg from '../database/db-pg.js';
+import dbPg from '../database/db-pg.js';
 import { SqlSearchHelper } from '../helpers/sql-search-helper.js';
 
 class ChatRepository {
-    db = new DbPg();
+    db = dbPg;
 
     // 1. Busca si ya existe una sala común entre dos usuarios (para no duplicar chats de a dos)
     buscarSalaCompartida = async (usuarioA: string, usuarioB: string) => {
@@ -56,7 +56,7 @@ class ChatRepository {
         return !!res;
     };
 
-// 4. Trae las salas del usuario con soporte para filtros de lectura Y búsqueda por nombre/apellido
+    // 4. Trae las salas del usuario con soporte para filtros de lectura Y búsqueda por nombre/apellido
     getSalasPorUsuario = async (usuarioId: string, filtro?: string, busqueda?: string) => {
         let sql = `
             SELECT 
@@ -89,12 +89,12 @@ class ChatRepository {
         // 🔥 Agregamos de forma dinámica tu Helper de búsqueda si viene el parámetro
         if (busqueda) {
             const palabrasClave = SqlSearchHelper.prepararPalabrasClaveTsQuery(busqueda);
-            
+
             sql += ` AND (
                 to_tsvector('spanish', u.nombre || ' ' || u.apellido) 
                 @@ to_tsquery('spanish', $${paramIndex})
             )`;
-            
+
             values.push(palabrasClave);
             paramIndex++;
         }
@@ -103,7 +103,7 @@ class ChatRepository {
 
         return await this.db.queryAll(sql, values);
     };
-    
+
     // ❌ Podés BORRAR por completo el método searchActiveChats de este archivo
 
     // 8. Elimina un mensaje físico de la DB
@@ -127,6 +127,22 @@ class ChatRepository {
             RETURNING id, sala_id;
         `;
         return await this.db.queryAll(sql, [salaId, usuarioId]);
+    };
+
+    getParticipantesSala = async (
+        salaId: string
+    ) => {
+
+        const sql = `
+        SELECT usuario_id
+        FROM participantes_sala
+        WHERE sala_id = $1
+    `;
+
+        return await this.db.queryAll(
+            sql,
+            [salaId]
+        );
     };
 
 }

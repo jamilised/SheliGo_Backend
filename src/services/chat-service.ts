@@ -2,10 +2,12 @@ import ChatRepository from '../repositories/chat-repository.js';
 import UsuariosRepository from '../repositories/usuarios-repository.js';
 import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
+import NotificacionesService from '../services/notificaciones-service.js';
 
 class ChatService {
     private chatRepo = ChatRepository;
     private usuariosRepo = UsuariosRepository;
+    private notificacionesService = NotificacionesService;
 
     // Función auxiliar para validar sintaxis de UUID (Lógica pura, se queda en el Service)
     private esUUIDValido = (uuid: string): boolean => {
@@ -15,53 +17,117 @@ class ChatService {
 
     // Obtener la lista de chats/salas de un usuario (con filtros y/o búsqueda)
     obtenerMisSalas = async (usuarioId: string, filtro?: string, busqueda?: string) => {
-        console.log(`⚡ SERVICIO CHAT: Buscando salas para ${usuarioId}. Filtro: ${filtro || 'ninguno'}, Busqueda: ${busqueda || 'ninguna'}`);
-        return await this.chatRepo.getSalasPorUsuario(usuarioId, filtro, busqueda);
+        const salas = await this.chatRepo.getSalasPorUsuario(usuarioId, filtro, busqueda) ?? [];
+
+        // Devolvemos URLs completas para que el cliente no dependa del nombre del bucket
+        return salas.map((sala: any) => ({
+            ...sala,
+            otro_usuario_foto: StorageHelper.buildUrl(sala.otro_usuario_foto)
+        }));
     };
 
     // Obtener o Crear una sala entre el usuario logueado y otro usuario
-    obtenerOCrearSala = async (usuarioLogueadoId: string, otroUsuarioId: string) => {
-        console.log(`⚡ SERVICIO CHAT: Buscando o creando sala entre ${usuarioLogueadoId} y ${otroUsuarioId}`);
-
+    obtenerOCrearSala = async (
+        usuarioLogueadoId: string,
+        otroUsuarioId: string
+    ) => {
         // 🚨 VALIDACIÓN 1: Sintaxis de UUID de ambos usuarios
-        if (!this.esUUIDValido(usuarioLogueadoId) || !this.esUUIDValido(otroUsuarioId)) {
-            throw new AppError('El ID de usuario proporcionado no tiene un formato válido.', 400);
+        if (
+            !this.esUUIDValido(usuarioLogueadoId) ||
+            !this.esUUIDValido(otroUsuarioId)
+        ) {
+            throw new AppError(
+                'El ID de usuario proporcionado no tiene un formato válido.',
+                400
+            );
         }
 
         // 🚨 VALIDACIÓN 2: No se puede crear una sala con uno mismo
         if (usuarioLogueadoId === otroUsuarioId) {
-            throw new AppError('No podés crear una sala de chat con vos mismo.', 400);
+            throw new AppError(
+                'No podés crear una sala de chat con vos mismo.',
+                400
+            );
         }
 
-        // 🚨 VALIDACIÓN 3: Capas respetadas. Usamos el repositorio de usuarios para verificar si existe
-        const otroUsuario = await this.usuariosRepo.getById(otroUsuarioId);
+        // 🚨 VALIDACIÓN 3: Verificar que el otro usuario exista
+        const otroUsuario =
+            await this.usuariosRepo.getById(
+                otroUsuarioId
+            );
+
         if (!otroUsuario) {
-            throw new AppError('El usuario con el que intentás chatear no existe.', 404);
+            throw new AppError(
+                'El usuario con el que intentás chatear no existe.',
+                404
+            );
         }
 
-        // 1. Checkear si ya tienen una sala juntos
-        const salaExistente = await this.chatRepo.buscarSalaCompartida(usuarioLogueadoId, otroUsuarioId);
+        // 1. Buscar si ya existe una sala entre ambos
+        const salaExistente =
+            await this.chatRepo.buscarSalaCompartida(
+                usuarioLogueadoId,
+                otroUsuarioId
+            );
 
+        // Si ya existe, simplemente devolvemos la sala.
+        // NO generamos una nueva notificación.
         if (salaExistente) {
-            console.log(`ℹ️ Ya existe la sala: ${salaExistente.sala_id}`);
-            return { sala_id: salaExistente.sala_id };
+            return {
+                sala_id: salaExistente.sala_id
+            };
         }
 
-        // 2. Si no existe, creamos la sala nueva
-        console.log(`✨ No existe sala común. Creando sala nueva...`);
-        const nuevaSala = await this.chatRepo.crearSala();
-        if (!nuevaSala) throw new AppError('No se pudo crear la sala de chat.', 500);
+        // 2. Crear una nueva sala
 
-        // 3. Unimos a los dos participantes a la sala
-        await this.chatRepo.agregarParticipante(nuevaSala.id, usuarioLogueadoId);
-        await this.chatRepo.agregarParticipante(nuevaSala.id, otroUsuarioId);
+        const nuevaSala =
+            await this.chatRepo.crearSala();
 
-        return { sala_id: nuevaSala.id };
+        if (!nuevaSala) {
+            throw new AppError(
+                'No se pudo crear la sala de chat.',
+                500
+            );
+        }
+
+        // 3. Agregar a ambos participantes
+        await this.chatRepo.agregarParticipante(
+            nuevaSala.id,
+            usuarioLogueadoId
+        );
+
+        await this.chatRepo.agregarParticipante(
+            nuevaSala.id,
+            otroUsuarioId
+        );
+
+        // 4. Notificar al usuario que recibió el nuevo contacto
+        await this.notificacionesService.crearNotificacion({
+
+            usuario_id:
+                otroUsuarioId,
+
+            publicacion_id:
+                null,
+
+            tipo:
+                "nueva_conversacion",
+
+            titulo:
+                "Nuevo chat",
+
+            contenido:
+                "Un usuario creó una conversación con vos."
+
+        });
+
+        return {
+            sala_id: nuevaSala.id
+        };
     };
 
     // Obtener el historial de mensajes de una sala y marcarlos como leídos
     obtenerMensajesSala = async (salaId: string, usuarioId: string) => {
-        console.log(`⚡ SERVICIO CHAT: Cargando mensajes para la sala ${salaId}`);
 
         if (!this.esUUIDValido(salaId)) {
             throw new AppError('El ID de la sala no es válido.', 400);
@@ -75,17 +141,23 @@ class ChatService {
         // 🚀 MAGIA: En segundo plano marcamos los mensajes que recibió este usuario como leídos
         await this.chatRepo.marcarMensajesComoLeidos(salaId, usuarioId);
 
-        return await this.chatRepo.getMensajesPorSala(salaId);
+        const mensajes = await this.chatRepo.getMensajesPorSala(salaId) ?? [];
+
+        // Las fotos se guardan como ruta relativa ("chats/..."): agregamos su URL pública
+        return mensajes.map((mensaje: any) => (
+            typeof mensaje.contenido === 'string' && mensaje.contenido.startsWith('chats/')
+                ? { ...mensaje, contenido_url: StorageHelper.buildUrl(mensaje.contenido) }
+                : mensaje
+        ));
     };
 
     // Guardar un mensaje nuevo enviado por el usuario
     guardarMensaje = async (
-        salaId: string, 
-        emisorId: string, 
-        contenido?: string, 
+        salaId: string,
+        emisorId: string,
+        contenido?: string,
         archivoFoto?: Express.Multer.File
     ) => {
-        console.log(`⚡ SERVICIO CHAT: Guardando nuevo mensaje en sala ${salaId}`);
 
         if (!this.esUUIDValido(salaId)) {
             throw new AppError('El ID de la sala no es válido.', 400);
@@ -124,7 +196,43 @@ class ChatService {
             contenidoFinal = fotoPath; // Se guarda como: chats/chat-1786...jpg
         }
 
-        const mensajeCreado = await this.chatRepo.enviarMensaje(salaId, emisorId, contenidoFinal);
+        const mensajeCreado = await this.chatRepo.enviarMensaje(
+            salaId,
+            emisorId,
+            contenidoFinal
+        );
+
+        const participantes =
+            await this.chatRepo.getParticipantesSala(
+                salaId
+            ) ?? [];
+
+        for (const participante of participantes) {
+
+            if (participante.usuario_id === emisorId) {
+                continue;
+            }
+
+            await this.notificacionesService
+                .crearNotificacion({
+
+                    usuario_id:
+                        participante.usuario_id,
+
+                    publicacion_id:
+                        null,
+
+                    tipo:
+                        "nuevo_mensaje",
+
+                    titulo:
+                        "Nuevo mensaje",
+
+                    contenido:
+                        "Recibiste un nuevo mensaje."
+
+                });
+        }
 
         // Si el contenido subido es una foto, formateamos o adjuntamos la URL completa para el cliente
         if (tieneFoto) {
@@ -136,7 +244,6 @@ class ChatService {
 
     // Eliminar un mensaje validando que el emisor sea el dueño
     eliminarMensaje = async (mensajeId: string, usuarioId: string) => {
-        console.log(`⚡ SERVICIO CHAT: Intentando eliminar mensaje ${mensajeId} por usuario ${usuarioId}`);
 
         if (!this.esUUIDValido(mensajeId)) {
             throw new AppError('El ID del mensaje no es válido.', 400);

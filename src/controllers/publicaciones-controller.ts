@@ -2,13 +2,15 @@ import type { Request, Response, NextFunction } from 'express';
 import publicacionesService from '../services/publicaciones-service.js';
 import preguntasService from '../services/preguntas-service.js';
 import archivosService from '../services/archivos-service.js';
+import type { z } from 'zod';
+import type { searchPublicacionSchema } from '../validations/publicacion-schema.js';
 
 const getRecientes = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('⚡ CONTROLLER PUB: Obteniendo recientes');
-
         const publicaciones =
-            await publicacionesService.getRecentPublicaciones();
+            await publicacionesService.getRecentPublicaciones(
+                res.locals.userIdLogged
+            );
 
         return res.status(200).json({
             status: 'success',
@@ -21,12 +23,12 @@ const getRecientes = async (req: Request, res: Response, next: NextFunction) => 
 
 const search = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        console.log('⚡ CONTROLLER PUB: Iniciando búsqueda filtrada');
-
-        // El middleware 'validateQuery' ya validó y limpió req.query
+        // validateQuery ya validó y transformó la query
+        const filtros = res.locals.validatedQuery as z.infer<typeof searchPublicacionSchema>;
         const publicaciones =
             await publicacionesService.searchPublicaciones(
-                req.query as any
+                filtros,
+                res.locals.userIdLogged
             );
 
         return res.status(200).json({
@@ -212,20 +214,6 @@ const update = async (
     next: NextFunction
 ) => {
     try {
-        console.log(
-            "🚀 LLEGÓ PETICIÓN AL CONTROLLER DE UPDATE!"
-        );
-
-        console.log(
-            "Params ID:",
-            req.params.id
-        );
-
-        console.log(
-            "Body recibido:",
-            req.body
-        );
-
         const id = req.params.id as string;
 
         const usuarioId =
@@ -273,6 +261,27 @@ const getMisPublicaciones = async (
     }
 };
 
+const marcarRecuperada = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const id = req.params.id as string;
+        const usuarioId = res.locals.userIdLogged;
+
+        const publicacion = await publicacionesService.marcarComoRecuperada(id, usuarioId);
+
+        return res.status(200).json({
+            status: "success",
+            message: "La publicación ha sido marcada como recuperada",
+            data: { publicacion }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export default {
     getRecientes,
     getMisPublicaciones,
@@ -284,5 +293,6 @@ export default {
     createRespuesta,
     create,
     remove,
-    update
+    update,
+    marcarRecuperada
 };
