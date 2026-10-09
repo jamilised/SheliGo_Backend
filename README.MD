@@ -176,7 +176,18 @@ JWT_SECRET=
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 SUPABASE_BUCKET=avatars
+
+# ---- Opcionales ----
+PORT=3000                     # Render la define sola
+DB_SSL=true                   # false solo para un Postgres local sin SSL
+SUPABASE_ANON_KEY=            # si falta, se usa la service role para validar tokens de Google
+CORS_ORIGINS=                 # dominios extra del frontend separados por coma
+TRUST_PROXY=1                 # cantidad de proxies delante (Render)
+USE_SYSTEM_CA=true            # confiar en los certificados del sistema operativo
 ```
+
+`CORS_ORIGINS` solo hace falta para dominios que no sean `localhost` ni
+`https://sheligo*.vercel.app` (ambos ya están permitidos).
 
 El arranque valida que estén configuradas las variables requeridas de PostgreSQL,
 JWT y Supabase Storage. El mismo esquema de contraseña se aplica al registro y
