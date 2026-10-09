@@ -25,8 +25,15 @@ class AuditoriaRepository {
         );
     };
 
-    // Últimas acciones visibles para el administrador (los institucionales ven las de sus instituciones)
+    /*
+    Últimas acciones visibles para el administrador.
+    - admin: todas (o las de la institución pedida, si acotó el dashboard).
+    - institution_admin: solo movimientos hechos por usuarios que pertenecen a
+      alguna de sus instituciones Y sobre esas mismas instituciones. Así no ve
+      la actividad del resto del equipo de la plataforma (p. ej. del admin general).
+    */
     getRecientes = async (ctx: AdminContext, limit: number) => {
+        const soloMiembros = ctx.rol === 'institution_admin';
         const sql = `
             SELECT
                 a.id, a.accion, a.entidad, a.entidad_id, a.institucion_id,
@@ -38,10 +45,15 @@ class AuditoriaRepository {
             INNER JOIN usuarios u ON u.id = a.admin_id
             LEFT JOIN instituciones i ON i.id = a.institucion_id
             WHERE ($1 OR a.institucion_id = ANY($2::uuid[]))
+              AND (NOT $3 OR EXISTS (
+                    SELECT 1 FROM usuarios_instituciones ui
+                    WHERE ui.usuario_id = a.admin_id
+                      AND ui.institucion_id = ANY($2::uuid[])
+              ))
             ORDER BY a.created_at DESC
-            LIMIT $3
+            LIMIT $4
         `;
-        return await this.db.queryAll(sql, [ctx.esGlobal, ctx.institucionesIds, limit]);
+        return await this.db.queryAll(sql, [ctx.esGlobal, ctx.institucionesIds, soloMiembros, limit]);
     };
 }
 
