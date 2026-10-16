@@ -2,10 +2,22 @@ import UsuariosRepository from '../repositories/usuarios-repository.js';
 import AppError from '../errors/app-error.js';
 import { StorageHelper } from '../helpers/storage-helper.js';
 import bcrypt from 'bcrypt';
+import { randomBytes } from 'node:crypto';
 import { BCRYPT_SALT_ROUNDS } from '../configs/security-config.js';
 
 class UsuariosService {
     private usuariosRepo = UsuariosRepository;
+
+    // Solo fotos subidas a la carpeta usuarios/ (nunca la de por defecto ni avatares de Google).
+    // Si falla queda un archivo huérfano, pero el perfil ya es consistente.
+    private borrarFotoAnterior = async (foto: string | null | undefined) => {
+        if (!foto || foto === StorageHelper.DEFAULT_USER_PHOTO || !foto.startsWith('usuarios/')) return;
+        try {
+            await StorageHelper.eliminarObjeto(foto);
+        } catch (error) {
+            console.error(`No se pudo borrar la foto de perfil ${foto}.`, error);
+        }
+    };
 
     getPerfil = async (id: string | undefined) => {
 
@@ -77,10 +89,12 @@ class UsuariosService {
 
             // El tipo de archivo ya lo valida upload-middleware (JPEG, PNG o WEBP)
             // y sharp lo convierte siempre a JPEG.
+            // Nombre nuevo en cada cambio: si se reusara `${id}.jpg`, la URL no
+            // cambiaría y el navegador / la CDN seguirían mostrando la foto vieja.
             const ruta = await StorageHelper.optimizarYSubir(
                 archivo.buffer,
                 "usuarios",
-                `${id}.jpg`,
+                `${id}-${randomBytes(6).toString("hex")}.jpg`,
                 {
                     width: 400,
                     height: 400,
@@ -117,15 +131,27 @@ class UsuariosService {
             await this.usuariosRepo.reemplazarInstituciones(id, body.instituciones_ids);
         }
 
-        const usuarioActualizado = await this.usuariosRepo.updatePerfil(
-            id,
-            nombreFinal,
-            apellidoFinal,
-            fotoFinal
-        );
+        let usuarioActualizado;
+        try {
+            usuarioActualizado = await this.usuariosRepo.updatePerfil(
+                id,
+                nombreFinal,
+                apellidoFinal,
+                fotoFinal
+            );
+        } catch (error) {
+            // El perfil no se guardó: la foto recién subida queda sin uso
+            if (archivo) await this.borrarFotoAnterior(fotoFinal);
+            throw error;
+        }
 
         if (!usuarioActualizado) {
             throw new AppError("No se pudo actualizar el perfil", 500);
+        }
+
+        // Con el perfil ya guardado, se borra la foto reemplazada
+        if (fotoFinal !== usuario.foto) {
+            await this.borrarFotoAnterior(usuario.foto);
         }
 
         usuarioActualizado.foto = StorageHelper.buildUrl(usuarioActualizado.foto);
