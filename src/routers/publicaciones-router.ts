@@ -15,6 +15,7 @@ import {
     publicacionPreguntaParamsSchema
 } from '../validations/preguntas-schema.js';
 import upload from "../middlewares/upload-middleware.js";
+import { subidaImagenesLimiter } from "../middlewares/rate-limit-middleware.js";
 import { validateParams } from '../middlewares/validation-middleware.js';
 
 const router = Router();
@@ -53,8 +54,8 @@ router.post(
 router.patch("/:id/recuperar", authMiddleware, validateParams(getPublicacionSchema), publicacionesController.marcarRecuperada);
 
 router.delete("/:id", authMiddleware, validateParams(getPublicacionSchema), publicacionesController.remove);
-router.put("/:id", authMiddleware, validateParams(getPublicacionSchema), upload.array("imagenes", 5), validateBody(updatePublicacionSchema), publicacionesController.update);
+router.put("/:id", authMiddleware, validateParams(getPublicacionSchema), subidaImagenesLimiter, upload.array("imagenes", 5), validateBody(updatePublicacionSchema), publicacionesController.update);
 
-router.post("/", authMiddleware, upload.array("imagenes", 5), validateBody(createPublicacionSchema), publicacionesController.create);
+router.post("/", authMiddleware, subidaImagenesLimiter, upload.array("imagenes", 5), validateBody(createPublicacionSchema), publicacionesController.create);
 
 export default router;

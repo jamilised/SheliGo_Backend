@@ -18,6 +18,15 @@ const POSTGRES_CLIENT_ERRORS: Record<string, { status: number; message: string }
   '23514': { status: 400, message: 'Uno de los valores enviados no está permitido.' }
 };
 
+// Errores 4xx que arma Express al leer el cuerpo (JSON mal formado, cuerpo demasiado grande)
+const getBodyParserStatus = (err: unknown): number | null => {
+  if (typeof err !== 'object' || err === null || !('type' in err) || !('status' in err)) {
+    return null;
+  }
+  const status = (err as { status?: unknown }).status;
+  return typeof status === 'number' && status >= 400 && status < 500 ? status : null;
+};
+
 const getPostgresClientError = (err: unknown) => {
   if (typeof err !== 'object' || err === null || !('code' in err)) {
     return null;
@@ -35,13 +44,14 @@ export const errorMiddleware = (
   const isMulterError = err instanceof multer.MulterError;
   const isControlledError = err instanceof AppError || err instanceof NotFoundError;
   const postgresError = getPostgresClientError(err);
+  const bodyParserStatus = getBodyParserStatus(err);
   const rawStatusCode = isMulterError
     ? 400
     : isControlledError
       ? err.statusCode
       : postgresError
         ? postgresError.status
-        : 500;
+        : bodyParserStatus ?? 500;
   // Errores controlados: 4xx y fallas de servicios externos (502/503)
   const allowedServerStatuses = [502, 503];
   const responseStatusCode = Number.isInteger(rawStatusCode)
@@ -56,7 +66,11 @@ export const errorMiddleware = (
     ? 'Ha ocurrido un error interno en el servidor.'
     : postgresError
       ? postgresError.message
-      : err instanceof Error
+      : bodyParserStatus === 413
+        ? 'El cuerpo de la solicitud es demasiado grande.'
+        : bodyParserStatus
+          ? 'El cuerpo de la solicitud no tiene un formato válido.'
+          : err instanceof Error
         ? err.message
         : 'La solicitud no es válida.';
 
@@ -87,6 +101,7 @@ export const errorMiddleware = (
   res.status(responseStatusCode).json({
     status: 'error',
     statusCode: responseStatusCode,
-    message
+    message,
+    ...(err instanceof AppError && err.errors && responseStatusCode === 400 ? { errors: err.errors } : {})
   });
 };

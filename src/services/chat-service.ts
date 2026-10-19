@@ -63,43 +63,15 @@ class ChatService {
             );
         }
 
-        // 1. Buscar si ya existe una sala entre ambos
-        const salaExistente =
-            await this.chatRepo.buscarSalaCompartida(
-                usuarioLogueadoId,
-                otroUsuarioId
-            );
-
-        // Si ya existe, simplemente devolvemos la sala.
-        // NO generamos una nueva notificación.
-        if (salaExistente) {
-            return {
-                sala_id: salaExistente.sala_id
-            };
-        }
-
-        // 2. Crear una nueva sala
-
-        const nuevaSala =
-            await this.chatRepo.crearSala();
-
-        if (!nuevaSala) {
-            throw new AppError(
-                'No se pudo crear la sala de chat.',
-                500
-            );
-        }
-
-        // 3. Agregar a ambos participantes
-        await this.chatRepo.agregarParticipante(
-            nuevaSala.id,
-            usuarioLogueadoId
-        );
-
-        await this.chatRepo.agregarParticipante(
-            nuevaSala.id,
+        const sala = await this.chatRepo.obtenerOCrearSalaEntre(
+            usuarioLogueadoId,
             otroUsuarioId
         );
+
+        // Si ya existía, se devuelve sin generar una nueva notificación
+        if (!sala.creada) {
+            return { sala_id: sala.sala_id };
+        }
 
         // 4. Notificar al usuario que recibió el nuevo contacto
         await this.notificacionesService.crearNotificacion({
@@ -122,7 +94,7 @@ class ChatService {
         });
 
         return {
-            sala_id: nuevaSala.id
+            sala_id: sala.sala_id
         };
     };
 

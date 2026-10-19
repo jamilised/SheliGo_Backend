@@ -49,3 +49,11 @@ SELECT
 ```
 
 Las tres columnas tienen que dar `true`.
+
+## 002 — RLS en las tablas públicas
+
+`002-rls-tablas-publicas.sql` activa RLS en todas las tablas de la app para que
+la clave `anon` del frontend (pública) no pueda leerlas por la API de Supabase.
+El backend no se ve afectado porque se conecta como dueño de las tablas; antes
+de correrla, hacé la verificación que figura al principio del archivo.
+Correrla **después** de desplegar el frontend que ya no usa Realtime en el chat.

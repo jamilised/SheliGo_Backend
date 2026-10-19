@@ -1,6 +1,7 @@
 import dbPg from '../database/db-pg.js'
 import Usuario from '../entities/usuario.js';
 import type { PoolClient } from 'pg'
+import AdminUsuariosRepository from './admin-usuarios-repository.js'
 
 class UsuariosRepository {
 
@@ -289,14 +290,11 @@ class UsuariosRepository {
         return await this.db.queryAll(sql, [usuarioId]);
     };
 
+    // Mantiene las membresías que siguen (y con ellas es_admin); solo quita y agrega las que cambian
     reemplazarInstituciones = async (usuarioId: string, institucionesIds: string[]) => {
-        await this.db.transaction(async (client) => {
-            await client.query(
-                `DELETE FROM usuarios_instituciones WHERE usuario_id = $1`,
-                [usuarioId]
-            );
-            await this.asociarInstituciones(usuarioId, institucionesIds, client);
-        });
+        await this.db.transaction((client) =>
+            AdminUsuariosRepository.reemplazarMembresias(client, usuarioId, institucionesIds)
+        );
     };
 }
 

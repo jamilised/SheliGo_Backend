@@ -3,6 +3,7 @@ import usuariosController from '../controllers/usuarios-controller.js';
 import { authMiddleware } from '../middlewares/auth-middleware.js';
 
 import upload from "../middlewares/upload-middleware.js";
+import { cambioContrasenaLimiter, subidaImagenesLimiter } from "../middlewares/rate-limit-middleware.js";
 import { validateBody } from "../middlewares/validation-middleware.js";
 import { updatePerfilSchema, cambiarContrasenaSchema } from "../validations/usuarios-schema.js";
 
@@ -19,6 +20,7 @@ router.get(
 router.put(
     '/cambiar-contrasena',
     authMiddleware,
+    cambioContrasenaLimiter,
     validateBody(cambiarContrasenaSchema),
     usuariosController.cambiarContrasena // Usamos la función dentro del objeto controller
 );
@@ -27,6 +29,7 @@ router.put(
 router.put(
     "/me",
     authMiddleware,
+    subidaImagenesLimiter,
     upload.single("foto"),
     validateBody(updatePerfilSchema),
     usuariosController.editarPerfil

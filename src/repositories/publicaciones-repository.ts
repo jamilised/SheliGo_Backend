@@ -1,4 +1,5 @@
 import dbPg from '../database/db-pg.js'
+import { SqlSearchHelper } from '../helpers/sql-search-helper.js'
 
 type ArchivoPersistido = {
     id: string;
@@ -373,12 +374,8 @@ class PublicacionesRepository {
             sql += ` AND p.estado = 'ninguno'`;
         }
 
-        if (filtros.busqueda) {
-            const palabrasClave = filtros.busqueda
-                .trim()
-                .split(/\s+/)
-                .map(palabra => `${palabra}:*`)
-                .join(' & ');
+        const palabrasClave = filtros.busqueda ? SqlSearchHelper.prepararPalabrasClaveTsQuery(filtros.busqueda) : null;
+        if (palabrasClave) {
 
             sql += ` AND (
             to_tsvector('spanish', p.nombre || ' ' || COALESCE(p.descripcion, '')) 

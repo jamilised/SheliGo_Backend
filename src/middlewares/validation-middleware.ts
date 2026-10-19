@@ -13,7 +13,11 @@ export const validateBody = (schema: z.ZodTypeAny) => {
         } catch (error) {
             if (error instanceof ZodError) {
                 const primerError = error.issues[0]?.message || 'Datos inválidos';
-                return next(new AppError(primerError, 400));
+                const errores = error.issues.map((issue) => ({
+                    path: issue.path.filter((parte): parte is string | number => typeof parte !== 'symbol'),
+                    message: issue.message
+                }));
+                return next(new AppError(primerError, 400, errores));
             }
             return next(error);
         }

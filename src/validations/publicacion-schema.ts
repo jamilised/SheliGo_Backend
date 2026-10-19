@@ -48,6 +48,11 @@ const limpiarTexto = (texto?: string | null) => {
     return limpio === "" ? null : limpio;
 };
 
+// En ediciones parciales, un campo que no se envía queda undefined (se conserva
+// el valor guardado); solo un texto vacío o null lo borra
+const limpiarTextoEditado = (texto?: string | null) =>
+    texto === undefined ? undefined : limpiarTexto(texto);
+
 export const createPublicacionSchema = z.object({
     nombre: z.string()
         .trim()
@@ -98,13 +103,13 @@ export const updatePublicacionSchema = createPublicacionSchema
             .max(100)
             .nullable()
             .optional()
-            .transform(limpiarTexto),
+            .transform(limpiarTextoEditado),
 
         descripcion: z.string()
             .max(1000, "La descripción no puede superar los 1000 caracteres")
             .nullable()
             .optional()
-            .transform(limpiarTexto),
+            .transform(limpiarTextoEditado),
 
         // La baja ('eliminada') solo por DELETE /publicaciones/:id, que además notifica
         estado: z.enum(['activa', 'recuperada'], {

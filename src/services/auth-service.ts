@@ -144,6 +144,12 @@ class AuthService {
         if (error || !user) {
             throw new AppError('Token de Google/Supabase inválido o expirado.', 401);
         }
+        // Solo cuentas de Google con el correo verificado: otra cuenta de Supabase
+        // con el mismo email podría entrar a un usuario ajeno (se busca por email)
+        const esGoogle = user.identities?.some((identidad) => identidad.provider === 'google') ?? false;
+        if (!esGoogle || !user.email_confirmed_at) {
+            throw new AppError('Solo se puede ingresar con una cuenta de Google verificada.', 401);
+        }
 
         const email = user.email?.toLowerCase().trim();
         if (!email) {

@@ -4,29 +4,38 @@ import { SqlSearchHelper } from '../helpers/sql-search-helper.js';
 class ChatRepository {
     db = dbPg;
 
-    // 1. Busca si ya existe una sala común entre dos usuarios (para no duplicar chats de a dos)
-    buscarSalaCompartida = async (usuarioA: string, usuarioB: string) => {
-        const sql = `
-            SELECT p1.sala_id 
-            FROM participantes_sala p1
-            JOIN participantes_sala p2 ON p1.sala_id = p2.sala_id
-            WHERE p1.usuario_id = $1 AND p2.usuario_id = $2
-            LIMIT 1;
-        `;
-        return await this.db.queryOne(sql, [usuarioA, usuarioB]);
-    };
+    /*
+    1. Devuelve la sala entre dos usuarios, creándola con sus dos participantes
+    si no existe. El lock por par serializa pedidos simultáneos (doble click en
+    "Reclamar"), así no se crean salas duplicadas ni salas sin participantes.
+    */
+    obtenerOCrearSalaEntre = async (usuarioA: string, usuarioB: string) =>
+        this.db.transaction(async (client) => {
+            const par = [usuarioA, usuarioB].sort().join(':');
+            await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [par]);
 
-    // 2. Crea una sala de chat nueva
-    crearSala = async () => {
-        const sql = `INSERT INTO salas_chat (created_at) VALUES (NOW()) RETURNING id;`;
-        return await this.db.queryOne(sql, []);
-    };
+            const existente = await client.query(
+                `SELECT p1.sala_id
+                 FROM participantes_sala p1
+                 JOIN participantes_sala p2 ON p1.sala_id = p2.sala_id
+                 WHERE p1.usuario_id = $1 AND p2.usuario_id = $2
+                 LIMIT 1`,
+                [usuarioA, usuarioB]
+            );
+            if (existente.rows[0]) {
+                return { sala_id: existente.rows[0].sala_id as string, creada: false };
+            }
 
-    // 3. Une a un usuario a una sala específica
-    agregarParticipante = async (salaId: string, usuarioId: string) => {
-        const sql = `INSERT INTO participantes_sala (sala_id, usuario_id) VALUES ($1, $2);`;
-        return await this.db.queryOne(sql, [salaId, usuarioId]);
-    };
+            const sala = await client.query(
+                `INSERT INTO salas_chat (created_at) VALUES (NOW()) RETURNING id`
+            );
+            const salaId = sala.rows[0].id as string;
+            await client.query(
+                `INSERT INTO participantes_sala (sala_id, usuario_id) VALUES ($1, $2), ($1, $3)`,
+                [salaId, usuarioA, usuarioB]
+            );
+            return { sala_id: salaId, creada: true };
+        });
 
     // 5. Trae el historial de mensajes de una sala ordenados cronológicamente
     getMensajesPorSala = async (salaId: string) => {
@@ -87,8 +96,8 @@ class ChatRepository {
         }
 
         // 🔥 Agregamos de forma dinámica tu Helper de búsqueda si viene el parámetro
-        if (busqueda) {
-            const palabrasClave = SqlSearchHelper.prepararPalabrasClaveTsQuery(busqueda);
+        const palabrasClave = busqueda ? SqlSearchHelper.prepararPalabrasClaveTsQuery(busqueda) : null;
+        if (palabrasClave) {
 
             sql += ` AND (
                 to_tsvector('spanish', u.nombre || ' ' || u.apellido) 

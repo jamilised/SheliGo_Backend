@@ -35,6 +35,7 @@ const defaultOrigins = [
     "http://localhost:5173",
     "http://localhost:4173",
     "http://localhost:8081",
+    "https://sheligo.vercel.app",
     "https://sheligo-fub1ieqxe-sheli-go.vercel.app"
 ];
 
@@ -46,8 +47,9 @@ const allowedOrigins = new Set([
         .filter(Boolean)
 ]);
 
-// Deploys de preview del proyecto en Vercel (sheligo-xxxx-sheli-go.vercel.app)
-const vercelPreviewOrigin = /^https:\/\/sheligo(-[a-z0-9-]+)?\.vercel\.app$/i;
+// Deploys de preview del proyecto en Vercel (sheligo-xxxx-sheli-go.vercel.app).
+// Exige el sufijo del equipo para no aceptar otros proyectos llamados "sheligo-..."
+const vercelPreviewOrigin = /^https:\/\/sheligo-[a-z0-9-]+-sheli-go\.vercel\.app$/i;
 
 app.use(
     cors({

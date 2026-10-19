@@ -14,6 +14,8 @@ class DbPg {
     transaction = async <T>(operation: (client: PoolClient) => Promise<T>): Promise<T> => {
         const client = await pool.connect()
         let transactionStarted = false
+        // Si el ROLLBACK falla, la conexión queda en estado dudoso: se descarta en vez de volver al pool
+        let conexionRota: Error | undefined
 
         try {
             await client.query('BEGIN')
@@ -28,6 +30,7 @@ class DbPg {
                 try {
                     await client.query('ROLLBACK')
                 } catch (rollbackError) {
+                    conexionRota = rollbackError instanceof Error ? rollbackError : new Error(String(rollbackError))
                     throw new AggregateError(
                         [error, rollbackError],
                         'La transacción falló y no se pudo revertir.'
@@ -37,7 +40,7 @@ class DbPg {
 
             throw error
         } finally {
-            client.release()
+            client.release(conexionRota)
         }
     }
 

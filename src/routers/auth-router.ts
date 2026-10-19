@@ -7,31 +7,10 @@ import {
     registerSchema
 } from '../validations/auth-schema.js';
 import { authMiddleware } from '../middlewares/auth-middleware.js';
-import rateLimit from "express-rate-limit";
+import { authLimiter } from "../middlewares/rate-limit-middleware.js";
 import upload from "../middlewares/upload-middleware.js";
 
 const router = Router();
-
-const authLimiter = rateLimit({
-
-    windowMs: 15 * 60 * 1000,
-
-    // Solo cuentan los intentos fallidos: un login correcto no consume el cupo
-    max: 10,
-
-    skipSuccessfulRequests: true,
-
-    standardHeaders: true,
-
-    legacyHeaders: false,
-
-    message: {
-        status: "error",
-        message:
-            "Demasiados intentos. Intenta nuevamente en 15 minutos."
-    }
-
-});
 
 // POST /auth/register -> Valida con Zod, atrapa los archivos con Multer y registra
 router.post(
@@ -56,7 +35,7 @@ router.post(
     authController.logout
 );
 
-router.post('/google', authController.loginConGoogle);
+router.post('/google', authLimiter, authController.loginConGoogle);
 
 // Se autentica con el token de Supabase (Google), no con el JWT de la app:
 // el usuario recién obtiene la sesión de SheliGo al completar este paso.

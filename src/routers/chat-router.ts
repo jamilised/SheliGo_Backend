@@ -2,6 +2,7 @@ import { Router } from 'express';
 import chatController from '../controllers/chat-controller.js';
 import { authMiddleware } from '../middlewares/auth-middleware.js';
 import upload from "../middlewares/upload-middleware.js";
+import { subidaImagenesLimiter } from "../middlewares/rate-limit-middleware.js";
 import { validateBody, validateParams, validateQuery } from '../middlewares/validation-middleware.js';
 import {
     abrirChatSchema,
@@ -32,6 +33,7 @@ router.get(
 // 📸 4. POST /api/chat/mensaje -> Permite enviar texto (JSON) O fotos enviadas por multipart/form-data (campo 'foto')
 router.post(
     '/mensaje',
+    subidaImagenesLimiter,
     upload.single('foto'),
     validateBody(enviarMensajeSchema),
     chatController.enviarMensaje

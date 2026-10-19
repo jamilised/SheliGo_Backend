@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import AppError from '../errors/app-error.js';
 import { createClient } from '@supabase/supabase-js';
 
 export class StorageHelper {
@@ -92,11 +93,15 @@ export class StorageHelper {
         }
     ): Promise<string | null> => {
 
+        // Tope de píxeles: una imagen chica comprimida puede ocupar GB al decodificarse
+        let pipeline = sharp(fileBuffer, { limitInputPixels: 40_000_000 });
         try {
-
-            let pipeline = sharp(fileBuffer);
-
             await pipeline.metadata();
+        } catch {
+            throw new AppError('El archivo no es una imagen válida o es demasiado grande.', 400);
+        }
+
+        try {
 
             if (opciones?.width || opciones?.height) {
 
@@ -122,12 +127,12 @@ export class StorageHelper {
 
             }
 
-            const bufferOptimizado =
-                await pipeline
-                    .jpeg({
-                        quality: 80
-                    })
-                    .toBuffer();
+            let bufferOptimizado: Buffer;
+            try {
+                bufferOptimizado = await pipeline.jpeg({ quality: 80 }).toBuffer();
+            } catch {
+                throw new AppError('El archivo no es una imagen válida o es demasiado grande.', 400);
+            }
 
             const fotoFinalPath =
                 `${folder}/${fileName}`;
@@ -172,6 +177,9 @@ export class StorageHelper {
 
         }
         catch (error) {
+            if (error instanceof AppError) {
+                throw error;
+            }
             const causeCode = (error as { cause?: { code?: string } })?.cause?.code;
             if (causeCode && /CERT|SELF_SIGNED|UNABLE_TO_VERIFY/.test(causeCode)) {
                 console.error(
