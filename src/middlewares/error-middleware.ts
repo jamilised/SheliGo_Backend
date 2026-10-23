@@ -11,6 +11,7 @@ const POSTGRES_CLIENT_ERRORS: Record<string, { status: number; message: string }
   '22P02': { status: 400, message: 'Uno de los identificadores enviados no es válido.' },
   '22007': { status: 400, message: 'La fecha enviada no es válida.' },
   '22008': { status: 400, message: 'La fecha enviada está fuera de rango.' },
+  '22001': { status: 400, message: 'Uno de los textos enviados supera el largo permitido.' },
   '23503': { status: 400, message: 'Uno de los datos relacionados (categoría, institución o usuario) no existe.' },
   '23505': { status: 409, message: 'El registro ya existe.' },
   // 23502 (NOT NULL) no se mapea: los datos del cliente ya los valida Zod, así

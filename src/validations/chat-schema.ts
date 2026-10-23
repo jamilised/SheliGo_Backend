@@ -19,7 +19,8 @@ export const enviarMensajeSchema = z.object({
     contenido: z.string()
         .trim()
         .min(1, 'El contenido no puede estar vacío')
-        .max(2000, 'El contenido no puede superar 2000 caracteres')
+        // mensajes.contenido es varchar(256) en la base
+        .max(256, 'El mensaje no puede superar los 256 caracteres')
         .optional()
 });
 
