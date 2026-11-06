@@ -1,6 +1,18 @@
-import { Pool } from 'pg'
+import pg, { Pool } from 'pg'
 import type { PoolClient } from 'pg'
 import config from '../configs/db-config.js'
+
+/*
+Las columnas de fecha de la base son "timestamp without time zone" y guardan la
+hora en UTC (NOW() en Supabase). Por defecto, pg las lee como hora local de la
+computadora que corre el backend: en una PC de Argentina quedaban 3 horas en el
+futuro, y en Render (UTC) se veían bien. Se leen siempre como UTC.
+*/
+pg.types.setTypeParser(pg.types.builtins.TIMESTAMP, (valor) => new Date(`${valor.replace(' ', 'T')}Z`))
+
+// Las columnas "date" (por ejemplo fecha_union) son un día del calendario, sin hora:
+// se devuelven tal cual ("2026-11-02") para que ninguna zona horaria las corra de día.
+pg.types.setTypeParser(pg.types.builtins.DATE, (valor) => valor)
 
 export const pool = new Pool(config)
 
